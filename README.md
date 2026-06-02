@@ -197,13 +197,14 @@ server.port=8081
 - [x] 38 个手工测试用例
 
 ### 待补方向
+
 | 方向 | 优先级 | 说明 |
 |------|--------|------|
-| **Redis 缓存** | P0 | 缓存用户/服务/绑定，减少 MySQL 查询 |
-| **单元测试覆盖** | P1 | JUnit + MockMvc |
-| **Docker Compose 完整编排** | P1 | 后端+MySQL+Redis 一键启动 |
-| **SpringDoc OpenAPI** | P1 | Swagger 自动接口文档 |
-| **GitHub Actions CI** | P1 | 自动构建+测试 |
+| **JUnit / MockMvc 最小测试** | P0 | Service 层 + Controller 层核心流程覆盖 |
+| **OpenAPI 接口文档** | P1 | SpringDoc + Swagger UI，自动生成 |
+| **Redis 缓存** | P1 | 验证码/登录态辅助/热点服务缓存 |
+| **Docker Compose 完整后端 + MySQL** | P2 | Spring Boot JAR + MySQL 一键编排 |
+| **GitHub Actions CI** | P1 | push 时自动 mvn verify + lint |
 | **微信支付接入** | P2 | 替换模拟支付 |
 | **紧急求助推送** | P2 | 微信模板通知监护人 |
 
