@@ -1,0 +1,110 @@
+<!--pages/service_detail/service_detail.wxml-->
+<view class="detail-container">
+  <view class="detail-card">
+    <!-- 服务类型 -->
+    <view class="detail-item">
+      <view class="detail-label">服务类型</view>
+      <view class="detail-value">
+        <block wx:if="{{serviceData.typeText}}">{{serviceData.typeText}}</block>
+        <block wx:else>
+          <block wx:if="{{serviceData.type === 0}}">生活照料</block>
+          <block wx:elif="{{serviceData.type === 1}}">医疗护理</block>
+          <block wx:elif="{{serviceData.type === 2}}">心理护理</block>
+          <block wx:else>未知类型</block>
+        </block>
+      </view>
+    </view>
+
+    <!-- 服务对象 -->
+    <view class="detail-item">
+      <view class="detail-label">服务对象</view>
+      <view class="detail-value">{{serviceData.targetName || '未指定'}}</view>
+    </view>
+
+    <!-- 预约时间 -->
+    <view class="detail-item">
+      <view class="detail-label">预约时间</view>
+      <view class="detail-value">{{serviceData.scheduledTime}}</view>
+    </view>
+
+    <!-- 服务地址 -->
+    <view class="detail-item">
+      <view class="detail-label">服务地址</view>
+      <view class="detail-value">{{serviceData.address}}</view>
+    </view>
+
+    <!-- 服务备注 -->
+    <view class="detail-item">
+      <view class="detail-label">服务备注</view>
+      <view class="detail-value remark">{{serviceData.remark || '无'}}</view>
+    </view>
+
+    <!-- 创建人 -->
+    <view class="detail-item">
+      <view class="detail-label">创建人</view>
+      <view class="detail-value">{{serviceData.creator}}</view>
+    </view>
+
+    <!-- 创建时间 -->
+    <view class="detail-item">
+      <view class="detail-label">创建时间</view>
+      <view class="detail-value">{{serviceData.createTime}}</view>
+    </view>
+
+    <!-- 服务状态 -->
+    <view class="detail-item">
+      <view class="detail-label">服务状态</view>
+      <view class="detail-value status status-{{serviceData.status}}">{{serviceData.statusText}}</view>
+    </view>
+
+    <!-- 服务人员 -->
+    <view class="detail-item">
+      <view class="detail-label">服务人员</view>
+      <view class="detail-value">{{serviceData.staff}}</view>
+    </view>
+  </view>
+
+  <!-- 底部按钮区域 -->
+  <view class="button-area">
+    <!-- 修改服务按钮 - 老人/监护人 & 待进行状态 -->
+    <button 
+      wx:if="{{showModifyBtn}}" 
+      class="action-btn modify-btn" 
+      bindtap="onModifyService"
+      disabled="{{isLoading}}">
+      修改服务
+    </button>
+    
+    <!-- 支付按钮 - 老人/监护人 & 待支付状态 -->
+    <button 
+      wx:if="{{showPayBtn}}" 
+      class="action-btn pay-btn" 
+      bindtap="onPayment"
+      disabled="{{isLoading}}">
+      立即支付
+    </button>
+    
+    <!-- 评价按钮 - 老人/监护人 & 待评价状态 -->
+    <button 
+      wx:if="{{showEvaluateBtn}}" 
+      class="action-btn evaluate-btn" 
+      bindtap="onEvaluateService"
+      disabled="{{isLoading}}">
+      评价服务
+    </button>
+    
+    <!-- 上传服务记录按钮 - 服务人员 & 待支付/待评价状态 -->
+    <button 
+      wx:if="{{showUploadBtn}}" 
+      class="action-btn upload-btn" 
+      bindtap="onUploadRecord"
+      disabled="{{isLoading}}">
+      上传服务记录
+    </button>
+
+    <!-- 删除服务按钮 (原取消按钮) -->
+    <button class="action-btn cancel-btn" wx:if="{{serviceData.status === 0 || serviceData.status === 1}}" bindtap="onCancelService">
+      删除服务
+    </button>
+  </view>
+</view>

@@ -1,0 +1,37 @@
+<!--pages/complaint/complaint.wxml-->
+<view class="container">
+  <!-- 页面标题 -->
+  <view class="page-header">
+    <view class="title">投诉与建议</view>
+    <view class="subtitle">如有问题请联系以下管理员</view>
+  </view>
+
+  <!-- 管理员列表 -->
+  <view class="admin-list">
+    <view class="admin-item" >
+      <view class="admin-info">
+        <view class="admin-name">Epoch</view>
+      </view>
+      <view class="contact-info">
+        <view class="contact-item">
+          <text class="contact-text">微信号：tby13468971612</text>
+          <view class="copy-btn" bindtap="copyWechat" data-wechat="tby13468971612">复制</view>
+        </view>
+        <view class="contact-item">
+          <text class="contact-text">电话号：19981243042</text>
+          <view class="copy-btn" bindtap="copyPhone" data-phone="19981243042">复制</view>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 投诉说明 -->
+  <view class="complaint-tips">
+    <view class="tips-title">投诉须知</view>
+    <view class="tips-content">
+      <text>1. 请优先通过微信联系管理员</text>
+      <text>2. 紧急情况可直接拨打管理员电话</text>
+      <text>3. 工作时间：周一至周五 9:00-18:00</text>
+    </view>
+  </view>
+</view> 

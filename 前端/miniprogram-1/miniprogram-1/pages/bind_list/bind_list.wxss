@@ -1,0 +1,175 @@
+.container {
+  min-height: 100vh;
+  background: #f5f5f5;
+  padding: 30rpx 30rpx 160rpx;
+  box-sizing: border-box;
+  position: relative;
+}
+
+/* 页面标题 */
+.page-header {
+  margin-bottom: 30rpx;
+}
+
+.title {
+  font-size: 36rpx;
+  color: #333;
+  font-weight: bold;
+}
+
+/* 加载中样式 */
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 100rpx 0;
+}
+
+.loading {
+  width: 60rpx;
+  height: 60rpx;
+  border: 4rpx solid #f3f3f3;
+  border-top: 4rpx solid #07c160;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 20rpx;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.loading-text {
+  font-size: 28rpx;
+  color: #999;
+}
+
+/* 绑定列表容器 */
+.bind-list-container {
+  width: 100%;
+}
+
+/* 绑定分类区域 */
+.bind-section {
+  border-radius: 20rpx;
+  margin-bottom: 30rpx;
+}
+
+.section-title {
+  font-size: 32rpx;
+  color: #333;
+  font-weight: bold;
+  margin-bottom: 20rpx;
+}
+
+.list-content {
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+}
+
+/* 绑定项样式 */
+.bind-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24rpx;
+  border-radius: 12rpx;
+  transition: all 0.2s;
+  background: #fff;
+  box-shadow: 0 2rpx 10rpx rgba(0, 0, 0, 0.05);
+}
+
+.bind-item.pending {
+  background: #fff7e6;
+}
+
+.bind-item.active {
+  background: #f6ffed;
+}
+
+.bind-item:active {
+  opacity: 0.8;
+  transform: scale(0.98);
+}
+
+.bind-info {
+  flex: 1;
+}
+
+.bind-name {
+  font-size: 30rpx;
+  color: #333;
+  font-weight: bold;
+  margin-bottom: 8rpx;
+}
+
+.bind-phone {
+  font-size: 26rpx;
+  color: #666;
+}
+
+/* 状态标签样式 */
+.status-text {
+  font-size: 24rpx;
+  padding: 6rpx 16rpx;
+  border-radius: 30rpx;
+}
+
+.status-text.pending {
+  background: #fff2e8;
+  color: #fa8c16;
+}
+
+.status-text.active {
+  background: #e8f7e9;
+  color: #07c160;
+}
+
+/* 空数据提示 */
+.empty-tip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 100rpx 0;
+}
+
+.empty-icon {
+  width: 120rpx;
+  height: 120rpx;
+  margin-bottom: 20rpx;
+  opacity: 0.5;
+}
+
+.empty-text {
+  font-size: 28rpx;
+  color: #999;
+}
+
+/* 添加按钮样式 */
+.add-btn {
+  position: fixed;
+  right: 40rpx;
+  bottom: 40rpx;
+  width: 100rpx;
+  height: 100rpx;
+  background: #07c160;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4rpx 16rpx rgba(7, 193, 96, 0.3);
+  transition: all 0.2s;
+}
+
+.add-btn image {
+  width: 48rpx;
+  height: 48rpx;
+}
+
+.add-btn:active {
+  transform: scale(0.95);
+} 

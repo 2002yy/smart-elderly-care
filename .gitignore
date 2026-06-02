@@ -1,0 +1,43 @@
+# === Java / Maven ===
+target/
+*.class
+*.jar
+*.war
+*.log
+mvnw
+mvnw.cmd
+.mvn/
+
+# === IDE ===
+.idea/
+*.iml
+.vscode/
+.project
+.classpath
+.settings/
+
+# === OS ===
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# === 敏感配置（含密码和密钥，绝对不能提交） ===
+**/application.properties
+**/application-dev.properties
+**/application-prod.properties
+
+# === 配置模板例外（不含敏感信息的模板可以提交） ===
+!**/application.properties.example
+
+# === 微信小程序 ===
+miniprogram-1/project.private.config.json
+miniprogram-1/node_modules/
+
+# === Node ===
+node_modules/
+npm-debug.log*
+
+# === 项目临时文件 ===
+*.zip
+temp/
+logs/

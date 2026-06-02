@@ -1,0 +1,92 @@
+<!--pages/service_create/service_create.wxml-->
+<view class="create-container">
+  <form bindsubmit="onSubmit">
+    
+    <!-- 服务对象 -->
+    <view class="form-group">
+      <view class="form-label">服务对象</view>
+      <picker class="form-picker" 
+              mode="selector" 
+              range="{{serviceTargetNames}}" 
+              value="{{formData.targetIndex}}"
+              bindchange="onTargetChange"
+              disabled="{{isEdit}}">
+        <view class="picker-content">
+          <text class="{{formData.targetIndex === -1 ? 'placeholder' : ''}}">
+            {{formData.targetIndex === -1 ? '请选择服务对象' : serviceTargetNames[formData.targetIndex]}}
+          </text>
+          <image class="picker-arrow" src="/resources/arrow-right.png"></image>
+        </view>
+      </picker>
+    </view>
+
+    <!-- 服务类型 -->
+    <view class="form-group">
+      <view class="form-label">服务类型</view>
+      <picker class="form-picker" 
+              mode="selector" 
+              range="{{serviceTypes}}" 
+              value="{{formData.typeIndex}}"
+              bindchange="onTypeChange"
+              disabled="{{isEdit}}">
+        <view class="picker-content">
+          <text class="{{formData.typeIndex === -1 ? 'placeholder' : ''}}">
+            {{formData.typeIndex === -1 ? '请选择服务类型' : serviceTypes[formData.typeIndex]}}
+          </text>
+          <image class="picker-arrow" src="/resources/arrow-right.png"></image>
+        </view>
+      </picker>
+    </view>
+
+    <!-- 预约时间 -->
+    <view class="form-group">
+      <view class="form-label">预约时间</view>
+      <picker class="form-picker" 
+              mode="multiSelector" 
+              range="{{timeRange}}" 
+              value="{{formData.timeIndex}}"
+              bindchange="onTimeChange"
+              bindcolumnchange="onTimeColumnChange">
+        <view class="picker-content">
+          <text class="{{formData.timeIndex[0] === -1 ? 'placeholder' : ''}}">
+            {{formData.timeIndex[0] === -1 ? '请选择预约时间' : formData.scheduledTime}}
+          </text>
+          <image class="picker-arrow" src="/resources/arrow-right.png"></image>
+        </view>
+      </picker>
+    </view>
+
+    <!-- 服务地址 -->
+    <view class="form-group">
+      <view class="form-label">服务地址</view>
+      <input class="form-input" 
+             name="address" 
+             placeholder="请输入服务地址" 
+             value="{{formData.address}}"
+             bindinput="onInput"
+             data-field="address"/>
+    </view>
+
+    <!-- 服务备注 -->
+    <view class="form-group">
+      <view class="form-label">服务备注</view>
+      <textarea class="form-textarea" 
+                name="remark" 
+                placeholder="请输入服务备注（选填）" 
+                value="{{formData.remark}}"
+                bindinput="onInput"
+                data-field="remark"
+                maxlength="200"/>
+      <view class="textarea-counter">{{formData.remark.length}}/200</view>
+    </view>
+
+    <!-- 提交按钮 -->
+    <button class="submit-btn {{submitActive ? 'active' : ''}} {{!hasFormChanged ? 'disabled' : ''}}" 
+            form-type="submit"
+            bindtouchstart="onSubmitTouchStart"
+            bindtouchend="onSubmitTouchEnd"
+            disabled="{{!hasFormChanged}}">
+      {{isEdit ? '确认修改' : '创建服务'}}
+    </button>
+  </form>
+</view> 

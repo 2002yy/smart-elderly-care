@@ -1,0 +1,129 @@
+.container {
+  min-height: 100vh;
+  padding-bottom: 40rpx;
+  position: relative;
+  
+}
+
+/* 用户信息 */
+.background{
+  position: absolute; /* 设置为绝对定位 */
+  top: 0; /* 顶部对齐 */
+  left: 0; /* 左侧对齐 */
+  width: 100%; /* 宽度占满整个容器 */
+  height:300rpx; 
+  z-index: -1; /* 确保图片在其他内容的后面 */
+  border-radius: 0 0 20rpx 20rpx;
+}
+
+.profile-card {
+  width:90%;
+  background: #fff;
+  border-radius: 20rpx;
+  margin: 20rpx 30rpx 30rpx 30rpx;
+  box-shadow: 0 2rpx 10rpx rgba(0,0,0,0.08);
+  padding: 30rpx 24rpx 24rpx 24rpx;
+  display: flex;
+  align-items: center;
+  position: relative;
+  border: 1rpx solid #ddd;
+}
+.avatar {
+  width: 100rpx;
+  height: 100rpx;
+  border-radius: 50%;
+  background: #f0f0f0;
+  margin-right: 24rpx;
+}
+
+.profile-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.username {
+  font-size: 32rpx;
+  color: #333;
+  font-weight: bold;
+}
+
+
+/* 常用功能 */
+.service-box {
+  width:90%;
+  background: #fff;
+  padding: 20rpx;
+  border-radius: 20rpx;
+  box-shadow: 0 4rpx 10rpx rgba(0, 0, 0, 0.1);
+  border: 1rpx solid #ddd;
+}
+
+.service-title {
+  font-size: 32rpx;
+  font-weight: bold;
+  margin-bottom: 20rpx;
+}
+
+.service-options {
+  display: flex;
+  justify-content: space-between;
+}
+
+.service-option {
+  text-align: center;
+  width: 25%; /* 每个选项占总宽度的25% */
+}
+
+.option-icon {
+  width: 60rpx;
+  height: 60rpx;
+  margin-bottom: 10rpx;
+}
+
+.option-name {
+  font-size: 28rpx;
+  color: #333;
+}
+
+
+
+/* 功能列表样式 */
+.function-list {
+  flex: 1;
+  background: #fff;
+  margin-top: 20rpx;
+  padding: 0 30rpx;
+  width:90%;
+  border-radius: 20px;
+  box-shadow: 0 4rpx 10rpx rgba(0, 0, 0, 0.1);
+  border: 1rpx solid #ddd;
+}
+
+.function-item {
+  display: flex;
+  align-items: center;
+  padding: 30rpx 0;
+  border-bottom: 2rpx solid #f5f5f5;
+}
+
+.function-item:last-child {
+  border-bottom: none;
+}
+
+.function-name {
+  flex: 1;
+  font-size: 28rpx;
+  color: #333;
+}
+
+
+/* 双击效果 */
+.function-item:active {
+  background-color: #f5f5f5;
+}
+
+
+
+

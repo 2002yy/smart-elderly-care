@@ -1,0 +1,31 @@
+<!--pages/bind_edit/bind_edit.wxml-->
+<view class="page-container">
+  <view class="page-header">
+    <view class="title">添加绑定</view>
+    <view class="subtitle">请输入对方信息进行绑定申请</view>
+  </view>
+
+  <view class="form-container">
+    <!-- 对方手机号 -->
+    <view class="form-item">
+      <text class="label">对方手机号</text>
+      <input class="input" type="number" placeholder="请输入对方注册的手机号" maxlength="11" bindinput="onPhoneInput" value="{{phone}}"/>
+    </view>
+
+    <!-- 与对方关系 -->
+    <view class="form-item">
+      <text class="label">与对方关系</text>
+      <picker mode="selector" range="{{relationTypes}}" bindchange="onRelationChange">
+        <view class="picker {{relation ? '' : 'placeholder'}}">
+          {{relation || '请选择与对方的关系'}}
+        </view>
+      </picker>
+    </view>
+
+    <!-- 提交按钮 -->
+    <button class="submit-btn" bindtap="handleSubmit">提交绑定申请</button>
+    
+    <!-- 返回按钮 -->
+    <button class="back-btn" bindtap="handleBack">返回列表</button>
+  </view>
+</view> 

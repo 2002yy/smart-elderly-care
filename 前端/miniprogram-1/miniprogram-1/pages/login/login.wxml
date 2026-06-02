@@ -1,0 +1,20 @@
+<!--pages/login.wxml-->
+<view class="container">
+  <!-- Logo区域 -->
+  <view class="logo-container">
+    <image class="logo" src="/resources/logo.jpeg" mode="aspectFit"></image>
+  </view>
+
+  <!-- 弹性占位元素 -->
+  <view class="spacer-1"></view>
+
+  <!-- 登录按钮区域 -->
+  <view class="btn-container">
+    <button class="wechat-btn" open-type="getUserInfo" bindgetuserinfo="handleWechatLogin">
+      微信登录
+    </button>
+  </view>
+
+  <!-- 弹性占位元素 -->
+  <view class="spacer-2"></view>
+</view>

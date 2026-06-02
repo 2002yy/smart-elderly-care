@@ -1,0 +1,189 @@
+.container {
+  min-height: 100vh;
+  background: #f5f5f5;
+  padding: 30rpx;
+  box-sizing: border-box;
+}
+
+/* 页面标题样式 */
+.page-header {
+  width: 80vw;
+  margin-bottom: 30rpx;
+}
+
+.title {
+  font-size: 36rpx;
+  color: #333;
+  font-weight: bold;
+  margin-bottom: 10rpx;
+}
+
+.subtitle {
+  font-size: 24rpx;
+  color: #999;
+}
+
+/* 设置列表样式 */
+.settings-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+}
+
+.setting-item {
+  width: 80vw;
+  background: #fff;
+  border-radius: 16rpx;
+  padding: 30rpx;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.05);
+}
+
+.setting-info {
+  flex: 1;
+}
+
+.setting-title {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 6rpx;
+}
+
+.setting-desc {
+  font-size: 26rpx;
+  color: #666;
+}
+
+.setting-switch {
+  width: 80rpx;
+  height: 40rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.setting-switch image {
+  width: 80rpx;
+  height: 40rpx;
+}
+
+/* 设置说明样式 */
+.settings-tips {
+  width: 80vw;
+  margin-top: 40rpx;
+  border-radius: 16rpx;
+  padding: 30rpx;
+}
+
+.tips-title {
+  font-size: 28rpx;
+  color: #333;
+  font-weight: bold;
+  margin-bottom: 20rpx;
+}
+
+.tips-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+}
+
+.tips-content text {
+  font-size: 26rpx;
+  color: #666;
+  line-height: 1.5;
+}
+
+/* 添加重启提示的样式 */
+.restart-tip {
+  margin: 30rpx;
+  padding: 20rpx;
+  background-color: #f8f8f8;
+  border-radius: 12rpx;
+  display: flex;
+  align-items: center;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.1);
+}
+
+.tip-icon {
+  width: 60rpx;
+  height: 60rpx;
+  margin-right: 20rpx;
+}
+
+.tip-icon image {
+  width: 100%;
+  height: 100%;
+}
+
+.tip-content {
+  flex: 1;
+}
+
+.tip-title {
+  font-size: 28rpx;
+  font-weight: bold;
+  color: #333;
+}
+
+.tip-desc {
+  font-size: 24rpx;
+  color: #666;
+  margin-top: 6rpx;
+}
+
+.restart-btn {
+  padding: 12rpx 24rpx;
+  background-color: #1890ff;
+  color: white;
+  font-size: 24rpx;
+  border-radius: 30rpx;
+  margin: 0;
+  line-height: 1.5;
+  min-height: auto;
+}
+
+.restart-btn::after {
+  border: none;
+}
+
+/* 添加预览部分的样式 */
+.preview-section {
+  margin: 30rpx;
+  padding-bottom: 20rpx;
+}
+
+.preview-title {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 16rpx;
+}
+
+.preview-card {
+  background-color: #fff;
+  border-radius: 12rpx;
+  padding: 24rpx;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.1);
+}
+
+.preview-item {
+  margin-bottom: 20rpx;
+}
+
+.preview-item:last-child {
+  margin-bottom: 0;
+}
+
+.preview-label {
+  font-size: 28rpx;
+  color: #666;
+  margin-bottom: 8rpx;
+}
+
+.preview-content {
+  color: #333;
+} 

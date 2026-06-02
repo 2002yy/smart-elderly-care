@@ -1,0 +1,84 @@
+<!--pages/info/info.wxml-->
+<view class="container">
+  <!-- 个人信息卡片 -->
+  <image class="background" src="https://file.51pptmoban.com/d/file/2022/08/22/bc0bb0eeaa189dd1380109000f8a5ed0.jpg"></image>
+
+  <view class="profile-card">
+    <image class="avatar" src="{{userInfo.avatarurl}}" mode="aspectFill"></image>
+    <view class="profile-info">
+      <view class="username">{{userInfo.username}}</view>
+    </view>
+  </view>
+  
+  
+
+
+
+  <!-- 常用功能 -->
+  <view class="service-box" wx:if="{{showServiceRouter}}">
+  <view class="service-title">我的服务</view>
+  <view class="service-options">
+    <view class="service-option" bindtap="navigateToPage" data-url="/pages/service_list/service_list" data-status="1">
+      <image class="option-icon" src="/resources/service.png"></image>
+      <view class="option-name">待进行</view>
+    </view>
+    <view class="service-option" bindtap="navigateToPage" data-url="/pages/service_list/service_list" data-status="2">
+      <image class="option-icon" src="/resources/service.png"></image>
+      <view class="option-name">进行中</view>
+    </view>
+    <view class="service-option" bindtap="navigateToPage" data-url="/pages/service_list/service_list" data-status="3">
+      <image class="option-icon" src="/resources/service.png"></image>
+      <view class="option-name">待支付</view>
+    </view>
+    <view class="service-option" bindtap="navigateToPage" data-url="/pages/service_list/service_list" data-status="4">
+      <image class="option-icon" src="/resources/service.png"></image>
+      <view class="option-name">待评价</view>
+    </view>
+  </view>
+  </view>
+
+
+  <!-- 功能列表 -->
+  <view class="function-list">
+    <view class="function-item" 
+          bindtap="onFunctionTap" 
+          data-type="profile"
+          data-tap-time="{{tapTime.profile}}">
+      <view class="function-name">个人信息修改</view>
+    </view>
+
+    <view wx:if="{{showBindBtn}}"
+          class="function-item" 
+          bindtap="onFunctionTap" 
+          data-type="binding"
+          data-tap-time="{{tapTime.binding}}">
+      <view class="function-name">用户绑定信息</view>
+    </view>
+
+    <view wx:if="{{showEmergencyBtn}}"
+          class="function-item" 
+          bindtap="onFunctionTap" 
+          data-type="emergency"
+          data-tap-time="{{tapTime.emergency}}">
+      <view class="function-name">紧急情况预设</view>
+    </view>
+
+    <view wx:if="{{showComplaintBtn}}"
+          class="function-item" 
+          bindtap="onFunctionTap" 
+          data-type="complaint"
+          data-tap-time="{{tapTime.complaint}}">
+      <view class="function-name">投诉建议</view>
+    </view>
+
+    <view wx:if="{{showSettingBtn}}"
+          class="function-item" 
+          bindtap="onFunctionTap" 
+          data-type="settings"
+          data-tap-time="{{tapTime.settings}}">
+      <view class="function-name">页面设置</view>
+    </view>
+
+    
+  </view>
+</view>

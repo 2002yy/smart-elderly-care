@@ -1,0 +1,67 @@
+<view class="container">
+  <!-- 页面标题 -->
+  <view class="page-header">
+    <view class="title {{largeTextEnabled ? 'large-text-title' : ''}}">适老化设置</view>
+    <view class="subtitle {{largeTextEnabled ? 'large-text-normal' : ''}}">根据您的需求调整界面显示和辅助功能</view>
+  </view>
+
+  <!-- 设置列表 -->
+  <view class="settings-list">
+    <!-- 大字版界面 -->
+    <view class="setting-item {{largeTextEnabled ? 'large-text-list-item' : ''}}" bindtap="onLargeTextTap">
+      <view class="setting-info">
+        <view class="setting-title {{largeTextEnabled ? 'large-text-title' : ''}}">大字版界面</view>
+        <view class="setting-desc {{largeTextEnabled ? 'large-text-normal' : ''}}">开启后界面文字将放大显示</view>
+      </view>
+      <switch 
+        class="setting-switch" 
+        checked="{{largeTextEnabled}}" 
+        bindchange="handleSwitchChange" 
+        data-type="largeText"
+        catchtap="catchTapEvent"
+      />
+    </view>  
+  </view> 
+
+  <!-- 文字大小预览 -->
+  <view class="preview-section" wx:if="{{largeTextEnabled}}">
+    <view class="preview-title large-text-title">大字版预览</view>
+    <view class="preview-card large-text-card">
+      <view class="preview-item">
+        <view class="preview-label large-text-label">标题文字</view>
+        <view class="preview-content large-text-title">这是标题文字大小</view>
+      </view>
+      <view class="preview-item">
+        <view class="preview-label large-text-label">普通文字</view>
+        <view class="preview-content large-text-normal">这是普通文字大小，用于大部分内容显示</view>
+      </view>
+      <view class="preview-item">
+        <view class="preview-label large-text-label">小号文字</view>
+        <view class="preview-content large-text-small">这是小号文字大小，用于辅助信息显示</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 重启提示 -->
+  <view class="restart-tip {{largeTextEnabled ? 'large-text-card' : ''}}" wx:if="{{needRestart}}">
+    <view class="tip-icon">
+      <image src="/resources/info.png" mode="aspectFit" class="{{largeTextEnabled ? 'large-text-icon' : ''}}"></image>
+    </view>
+    <view class="tip-content">
+      <view class="tip-title {{largeTextEnabled ? 'large-text-normal' : ''}}">设置已更改</view>
+      <view class="tip-desc {{largeTextEnabled ? 'large-text-small' : ''}}">需要重启小程序才能生效</view>
+    </view>
+    <button class="restart-btn {{largeTextEnabled ? 'large-text-button' : ''}}" bindtap="restartApp">立即重启</button>
+  </view>
+
+  <!-- 设置说明 -->
+  <view class="settings-tips">
+    <view class="tips-title {{largeTextEnabled ? 'large-text-normal' : ''}}">使用说明</view>
+    <view class="tips-content {{largeTextEnabled ? 'large-text-small' : ''}}">
+      <text>• 大字版界面：适合视力较弱的用户使用</text>
+      <text>• 开启后所有页面的文字将会变大</text>
+      <text>• 设置更改后需要重启小程序生效</text>
+      <text>• 您可以随时在此页面关闭大字版</text>
+    </view>
+  </view>
+</view> 

@@ -1,0 +1,242 @@
+.service-list-container {
+  min-height: 100vh;
+  background: #f5f5f5;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 顶部状态栏样式 */
+.status-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  background: #fff;
+  box-shadow: 0 2rpx 10rpx rgba(0,0,0,0.05);
+}
+
+.status-scroll {
+  white-space: nowrap;
+  padding: 0 20rpx;
+}
+
+.status-items {
+  display: flex; 
+  width: 100%; 
+  padding: 20rpx 0;
+}
+
+.status-item {
+  position: relative;
+  flex: 1; 
+  text-align: center; 
+  padding: 0 30rpx;
+  font-size: 28rpx;
+  color: #666;
+  transition: all 0.3s;
+}
+
+.status-item.active {
+  color: #07c160;
+  font-weight: bold;
+}
+
+.status-indicator {
+  position: absolute;
+  bottom: -10rpx;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 40rpx;
+  height: 4rpx;
+  background: #07c160;
+  border-radius: 2rpx;
+  animation: indicatorSlide 0.3s ease-out;
+}
+
+@keyframes indicatorSlide {
+  from {
+    width: 0;
+    opacity: 0;
+  }
+  to {
+    width: 40rpx;
+    opacity: 1;
+  }
+}
+
+/* 加载中样式 */
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 100rpx 0;
+  margin-top: 100rpx;
+}
+
+.loading {
+  width: 60rpx;
+  height: 60rpx;
+  border: 4rpx solid #f3f3f3;
+  border-top: 4rpx solid #07c160;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 20rpx;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.loading-text {
+  font-size: 28rpx;
+  color: #999;
+}
+
+/* 服务列表样式 */
+.service-scroll {
+  flex: 1;
+  margin-top: 100rpx;
+  padding: 20rpx;
+}
+
+.service-list {
+  padding-bottom: 40rpx;
+  width: 100vw;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.service-card {
+  background: #fff;
+  border-radius: 20rpx;
+  padding: 30rpx;
+  margin-bottom: 20rpx;
+  margin-right: 40rpx;
+  box-shadow: 0 2rpx 10rpx rgba(0,0,0,0.05);
+  width: 90vw;
+  transition: all 0.2s;
+}
+
+.service-card:active {
+  transform: scale(0.98);
+  opacity: 0.9;
+}
+
+.service-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20rpx;
+}
+
+.service-name {
+  font-size: 32rpx;
+  color: #333;
+  font-weight: bold;
+}
+
+.service-status {
+  font-size: 24rpx;
+  padding: 4rpx 16rpx;
+  border-radius: 20rpx;
+}
+
+.status-pending {
+  color: #fa8c16;
+  background: rgba(250, 140, 22, 0.1);
+}
+
+.status-ongoing {
+  color: #1890ff;
+  background: rgba(24, 144, 255, 0.1);
+}
+
+.status-payment {
+  color: #722ed1;
+  background: rgba(114, 46, 209, 0.1);
+}
+
+.status-review {
+  color: #eb2f96;
+  background: rgba(235, 47, 150, 0.1);
+}
+
+.status-completed {
+  color: #52c41a;
+  background: rgba(82, 196, 26, 0.1);
+}
+
+.service-info {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+
+.info-item {
+  display: flex;
+  align-items: center;
+}
+
+.info-icon {
+  width: 32rpx;
+  height: 32rpx;
+  margin-right: 12rpx;
+}
+
+.info-text {
+  font-size: 26rpx;
+  color: #666;
+}
+
+/* 空数据提示 */
+.empty-tip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 100rpx 0;
+  margin-top: 50rpx;
+}
+
+.empty-icon {
+  width: 120rpx;
+  height: 120rpx;
+  margin-bottom: 20rpx;
+  opacity: 0.5;
+}
+
+.empty-text {
+  font-size: 28rpx;
+  color: #999;
+}
+
+/* 悬浮添加按钮样式 */
+.add-btn {
+  position: fixed;
+  right: 40rpx;
+  bottom: 40rpx;
+  width: 100rpx;
+  height: 100rpx;
+  background: #07c160;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4rpx 16rpx rgba(7,193,96,0.3);
+  transition: all 0.3s;
+  z-index: 99;
+}
+
+.add-btn.active {
+  transform: scale(0.9);
+  box-shadow: 0 2rpx 8rpx rgba(7,193,96,0.2);
+}
+
+.add-icon {
+  width: 48rpx;
+  height: 48rpx;
+} 

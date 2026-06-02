@@ -1,0 +1,102 @@
+<!--pages/service_list/service_list.wxml-->
+<view class="service-list-container">
+  <!-- 顶部状态栏 -->
+  <view class="status-bar">
+    <scroll-view scroll-x="true" class="status-scroll" enhanced show-scrollbar="{{false}}">
+      <!-- 老人或监护人视图 (userType = 0 或 1) -->
+      <view class="status-items" wx:if="{{isClientUser}}">
+        <view class="status-item {{currentStatus === 1 ? 'active' : ''}}" 
+              bindtap="switchStatus" 
+              data-status="{{1}}">
+          <text>待进行</text>
+          <view class="status-indicator" wx:if="{{currentStatus === 1}}"></view>
+        </view>
+        <view class="status-item {{currentStatus === 2 ? 'active' : ''}}" 
+              bindtap="switchStatus" 
+              data-status="{{2}}">
+          <text>进行中</text>
+          <view class="status-indicator" wx:if="{{currentStatus === 2}}"></view>
+        </view>
+        <view class="status-item {{currentStatus === 3 ? 'active' : ''}}" 
+              bindtap="switchStatus" 
+              data-status="{{3}}">
+          <text>待支付</text>
+          <view class="status-indicator" wx:if="{{currentStatus === 3}}"></view>
+        </view>
+        <view class="status-item {{currentStatus === 4 ? 'active' : ''}}" 
+              bindtap="switchStatus" 
+              data-status="{{4}}">
+          <text>待评价</text>
+          <view class="status-indicator" wx:if="{{currentStatus === 4}}"></view>
+        </view>
+      </view>
+      
+      <!-- 员工视图 (userType = 2, 3 或 4) -->
+      <view class="status-items" wx:else>
+        <view class="status-item {{currentStatus === 1 ? 'active' : ''}}" 
+              bindtap="switchStatus" 
+              data-status="{{1}}">
+          <text>待进行</text>
+          <view class="status-indicator" wx:if="{{currentStatus === 1}}"></view>
+        </view>
+        <view class="status-item {{currentStatus === 2 ? 'active' : ''}}" 
+              bindtap="switchStatus" 
+              data-status="{{2}}">
+          <text>进行中</text>
+          <view class="status-indicator" wx:if="{{currentStatus === 2}}"></view>
+        </view>
+        <view class="status-item {{currentStatus === 'completed' ? 'active' : ''}}" 
+              bindtap="switchStatus" 
+              data-status="completed">
+          <text>已完成</text>
+          <view class="status-indicator" wx:if="{{currentStatus === 'completed'}}"></view>
+        </view>
+      </view>
+    </scroll-view>
+  </view>
+
+  <!-- 加载中提示 -->
+  <view class="loading-container" wx:if="{{isLoading}}">
+    <view class="loading"></view>
+    <text class="loading-text">加载中...</text>
+  </view>
+
+  <!-- 服务列表 -->
+  <scroll-view scroll-y="true" class="service-scroll" bindscrolltolower="loadMore" refresher-enabled="{{true}}" refresher-triggered="{{refreshing}}" bindrefresherrefresh="onRefresh">
+    <view class="service-list" wx:if="{{!isLoading && filteredServices.length > 0}}">
+      <block wx:for="{{filteredServices}}" wx:key="id">
+        <view class="service-card" bindtap="navigateToDetail" data-id="{{item.id}}">
+          <view class="service-header">
+            <text class="service-name">{{item.type === 0 ? '生活照料' : (item.type === 1 ? '医疗护理' : '心理护理')}}</text>
+            <text class="service-status {{getStatusClass(item.status)}}">{{getStatusText(item.status)}}</text>
+          </view>
+          <view class="service-info">
+            <view class="info-item">
+              <text class="info-text">{{item.scheduledTime}}</text>
+            </view>
+            <view class="info-item">
+              <text class="info-text">{{item.address}}</text>
+            </view>
+            <view class="info-item">
+              <text class="info-text">{{isClientUser ? (item.status === 0 ? '待分配' : (item.staffName || '待分配')) : item.clientName}}</text>
+            </view>
+          </view>
+        </view>
+      </block>
+    </view>
+
+    <!-- 无数据提示 -->
+    <view class="empty-tip" wx:if="{{!isLoading && filteredServices.length === 0}}">
+      
+      <text class="empty-text">暂无服务数据</text>
+    </view>
+  </scroll-view>
+
+  <!-- 悬浮添加按钮 -->
+  <view class="add-btn {{addBtnActive ? 'active' : ''}}" 
+        bindtap="onAddService" 
+        bindtouchstart="onAddBtnTouchStart" 
+        bindtouchend="onAddBtnTouchEnd">
+    <image class="add-icon" src="/resources/plus.png"></image>
+  </view>
+</view> 

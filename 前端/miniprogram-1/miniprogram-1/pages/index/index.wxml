@@ -1,0 +1,44 @@
+<!--pages/elder_index/elder_index.wxml-->
+<view class="user-index-container">
+  <!-- 轮播图 -->
+  <swiper class="banner-swiper" indicator-dots="true" autoplay="true" interval="4000" duration="500">
+    <swiper-item>
+      <view class="banner-item"></view>
+    </swiper-item>
+    <swiper-item>
+      <view class="banner-item"></view>
+    </swiper-item>
+    <swiper-item>
+      <view class="banner-item"></view>
+    </swiper-item>
+  </swiper>
+
+  <!-- 个人信息卡片 -->
+  <view class="profile-card {{profileActive ? 'active' : ''}}" bindtap="onProfileTap">
+    <image class="avatar" src="{{userInfo.avatarurl}}" mode="aspectFill"></image>
+    <view class="profile-info">
+      <view class="username">{{userInfo.username}}</view>
+    </view>
+  </view>
+
+  <!-- 服务按钮区 -->
+  <view class="service-btns">
+    <view wx:if="{{showServiceCreate}}"
+    class="service-btn create-btn {{createActive ? 'active' : ''}}" bindtap="onCreateService">
+      <image class="service-icon" src="/resources/create_service.png"></image>
+      <view class="service-title">创建任务</view>
+    </view>
+    <view class="service-btn view-btn {{viewActive ? 'active' : ''}}" bindtap="onViewService">
+      <image class="service-icon" src="/resources/check_service.png"></image>
+      <view class="service-title">查看任务</view>
+    </view>
+  </view>
+
+  <!-- 紧急呼救按钮 -->
+  <view wx:if="{{showEmergencyBtn}}"
+  class="emergency-btn {{emergencyActive ? 'active' : ''}}" 
+        bind:tap="onEmergencyTap">
+    <image class="emergency-icon" src="/resources/emergency.png"></image>
+    <view class="emergency-title">紧急呼救</view>
+  </view>
+</view> 

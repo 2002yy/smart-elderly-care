@@ -1,0 +1,60 @@
+{
+  "pages": [
+    "pages/login/login",
+    "pages/signup/signup",
+    "pages/index/index",
+    "pages/info/info",
+    "pages/service_list/service_list",
+    "pages/emergency/emergency",
+    "pages/emergency_info/emergency_info",
+    "pages/complaint/complaint",
+    "pages/accessibility/accessibility",
+    "pages/bind_list/bind_list",
+    "pages/bind_edit/bind_edit",
+    "pages/service_evaluate/service_evaluate",
+    "pages/service_detail/service_detail",
+    "pages/service_create/service_create"
+  ],
+  "window": {
+    "navigationBarTextStyle": "black",
+    "navigationBarTitleText": "智慧养老",
+    "navigationBarBackgroundColor": "#fff"
+  },
+  "style": "v2",
+  "componentFramework": "glass-easel",
+  "sitemapLocation": "sitemap.json",
+  "lazyCodeLoading": "requiredComponents",
+  "entryPagePath": "pages/login/login",
+  "networkTimeout": {
+    "request": 10000,
+    "connectSocket": 10000,
+    "uploadFile": 10000,
+    "downloadFile": 10000
+  },
+  "tabBar": {
+    "color": "black",
+    "selectedColor": "#1aad19",
+    "backgroundColor": "gray",
+    "borderStyle": "black",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "text": "首页",
+        "iconPath": "resources/home.png",
+        "selectedIconPath": "resources/home-selected.png"
+      },
+      {
+        "pagePath": "pages/service_list/service_list",
+        "text": "服务",
+        "iconPath": "resources/service.png",
+        "selectedIconPath": "resources/service-selected.png"
+      },
+      {
+        "pagePath": "pages/info/info",
+        "text": "我的",
+        "iconPath": "resources/my.png",
+        "selectedIconPath": "resources/my-selected.png"
+      }
+    ]
+  }
+}

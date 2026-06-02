@@ -1,0 +1,91 @@
+<!--pages/service_evaluate/service_evaluate.wxml-->
+<view class="evaluate-container">
+  <form bindsubmit="onSubmit">
+    <!-- 服务信息 -->
+    <view class="service-info-card">
+      <view class="service-header">
+        <view class="service-title">
+          <text wx:if="{{serviceData.type === 0}}">生活照料</text>
+          <text wx:elif="{{serviceData.type === 1}}">医疗护理</text>
+          <text wx:elif="{{serviceData.type === 2}}">心理护理</text>
+          <text wx:else>未知服务类型</text>
+        </view>
+        <view class="service-status">待评价</view>
+      </view>
+
+      <view class="service-details">
+        <view class="detail-item">
+          <view class="detail-label">服务时间</view>
+          <view class="detail-value">{{serviceData.scheduledTime}}</view>
+        </view>
+        <view class="detail-item">
+          <view class="detail-label">服务地点</view>
+          <view class="detail-value">{{serviceData.address}}</view>
+        </view>
+        <view class="detail-item">
+          <view class="detail-label">服务对象</view>
+          <view class="detail-value">{{serviceData.clientName}}</view>
+        </view>
+        <view class="detail-item">
+          <view class="detail-label">服务人员</view>
+          <view class="detail-value">{{serviceData.staffName}}</view>
+        </view>
+        <view class="detail-item" wx:if="{{serviceData.remark}}">
+          <view class="detail-label">服务备注</view>
+          <view class="detail-value">{{serviceData.remark}}</view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 星级评分 -->
+    <view class="rating-group">
+      <view class="rating-label">服务评分</view>
+      <view class="stars">
+        <view class="star {{rating >= 1 ? 'active' : ''}}" 
+              bindtap="onStarTap" 
+              data-rating="1">
+          <image src="/resources/star-fill.png" mode="aspectFit"></image>
+        </view>
+        <view class="star {{rating >= 2 ? 'active' : ''}}" 
+              bindtap="onStarTap" 
+              data-rating="2">
+          <image src="/resources/star-fill.png" mode="aspectFit"></image>
+        </view>
+        <view class="star {{rating >= 3 ? 'active' : ''}}" 
+              bindtap="onStarTap" 
+              data-rating="3">
+          <image src="/resources/star-fill.png" mode="aspectFit"></image>
+        </view>
+        <view class="star {{rating >= 4 ? 'active' : ''}}" 
+              bindtap="onStarTap" 
+              data-rating="4">
+          <image src="/resources/star-fill.png" mode="aspectFit"></image>
+        </view>
+        <view class="star {{rating >= 5 ? 'active' : ''}}" 
+              bindtap="onStarTap" 
+              data-rating="5">
+          <image src="/resources/star-fill.png" mode="aspectFit"></image>
+        </view>
+      </view>
+      <view class="rating-text">{{ratingText}}</view>
+    </view>
+
+    <!-- 评价内容 -->
+    <view class="content-group">
+      <view class="content-label">评价内容</view>
+      <textarea class="content-input" 
+                placeholder="请输入您的评价内容（选填）" 
+                value="{{comment}}"
+                bindinput="onContentInput"
+                maxlength="500"/>
+      <view class="content-counter">{{comment.length || 0}}/500</view>
+    </view>
+
+    <!-- 提交按钮 -->
+    <button class="submit-btn {{isSubmitting ? 'disabled' : ''}}"
+            form-type="submit"
+            disabled="{{isSubmitting}}">
+      提交评价
+    </button>
+  </form>
+</view> 

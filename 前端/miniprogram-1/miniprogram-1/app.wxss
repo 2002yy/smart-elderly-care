@@ -1,0 +1,65 @@
+/**app.wxss**/
+.container {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: 200rpx 0;
+  box-sizing: border-box;
+} 
+
+/* 大字版模式的全局样式 */
+/* 这些样式会在页面中通过app.globalData.largeTextEnabled判断是否应用 */
+/* 在实际组件中可以使用：class="{{app.globalData.largeTextEnabled ? 'large-text' : ''}}" */
+
+/* 标题文字 */
+.large-text-title {
+  font-size: 40rpx !important;
+  line-height: 1.5 !important;
+}
+
+/* 普通文字 */
+.large-text-normal {
+  font-size: 32rpx !important;
+  line-height: 1.5 !important;
+}
+
+/* 小文字 */
+.large-text-small {
+  font-size: 28rpx !important;
+  line-height: 1.5 !important;
+}
+
+/* 按钮文字 */
+.large-text-button {
+  font-size: 36rpx !important;
+  padding: 24rpx 32rpx !important;
+}
+
+/* 输入框 */
+.large-text-input {
+  font-size: 32rpx !important;
+  height: 88rpx !important;
+}
+
+/* 表单标签 */
+.large-text-label {
+  font-size: 32rpx !important;
+  margin-bottom: 16rpx !important;
+}
+
+/* 卡片内容增加间距 */
+.large-text-card {
+  padding: 32rpx !important;
+}
+
+/* 列表项增加高度 */
+.large-text-list-item {
+  padding: 32rpx 24rpx !important;
+}
+
+/* 图标放大 */
+.large-text-icon {
+  transform: scale(1.2) !important;
+} 

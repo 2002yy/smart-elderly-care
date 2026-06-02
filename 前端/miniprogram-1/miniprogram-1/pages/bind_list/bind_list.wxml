@@ -1,0 +1,66 @@
+<!--pages/bind_list/bind_list.wxml-->
+<view class="container">
+  <view class="page-header">
+    <view class="title">绑定管理</view>
+  </view>
+
+  <!-- 加载中提示 -->
+  <view class="loading-container" wx:if="{{isLoading}}">
+    <view class="loading"></view>
+    <text class="loading-text">加载中...</text>
+  </view>
+
+  <!-- 绑定列表内容 -->
+  <view class="bind-list-container" wx:else>
+    <!-- 待确认的绑定 -->
+    <view class="bind-section" wx:if="{{pendingBinds.length > 0}}">
+      <view class="section-title">待确认</view>
+      <view class="list-content">
+        <view class="bind-item pending" 
+              wx:for="{{pendingBinds}}" 
+              wx:key="id"
+              bindtap="onPendingBindTap"
+              data-item="{{item}}">
+          <view class="bind-info">
+            <view class="bind-name">{{item.name}}</view>
+            <view class="bind-phone">{{item.phone}}</view>
+          </view>
+          <view class="bind-status">
+            <text class="status-text pending">待确认</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 已绑定的对象 -->
+    <view class="bind-section" wx:if="{{activeBinds.length > 0}}">
+      <view class="section-title">已绑定</view>
+      <view class="list-content">
+        <view class="bind-item active" 
+              wx:for="{{activeBinds}}" 
+              wx:key="id"
+              bindtap="onActiveBindTap"
+              data-item="{{item}}">
+          <view class="bind-info">
+            <view class="bind-name">{{item.name}}</view>
+            <view class="bind-phone">{{item.phone}}</view>
+          </view>
+          <view class="bind-status">
+            <text class="status-text active">已绑定</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 无绑定数据提示 -->
+    <view class="empty-tip" wx:if="{{pendingBinds.length === 0 && activeBinds.length === 0}}">
+      
+      <text class="empty-text">暂无绑定数据</text>
+    </view>
+  </view>
+
+  <!-- 添加按钮 -->
+  <navigator url="/pages/bind_edit/bind_edit" class="add-btn">
+    <image src="/resources/plus.png" mode="aspectFit"></image>
+  </navigator>
+</view> 

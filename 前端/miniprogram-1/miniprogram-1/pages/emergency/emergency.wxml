@@ -1,0 +1,86 @@
+<!--pages/emergency/emergency.wxml-->
+<view class="container">
+  <view class="page-header">
+    <view class="title">紧急医疗信息</view>
+    <view class="subtitle">请填写您的紧急医疗信息，以便于急救人员快速了解您的情况</view>
+  </view>
+
+  <form>
+    <!-- 血型选择 -->
+    <view class="form-group">
+      <view class="form-item">
+        <view class="form-label">血型</view>
+        <picker mode="selector" range="{{bloodTypes}}" bindchange="onBloodTypeChange">
+          <view class="picker-input">
+            {{emergencyInfo.bloodType || '请选择您的血型'}}
+          </view>
+        </picker>
+      </view>
+    </view>
+
+    <!-- 过敏史 -->
+    <view class="form-group">
+      <view class="form-item">
+        <view class="form-label">过敏史</view>
+        <textarea class="form-textarea" 
+                  placeholder="请填写您的过敏史，如药物过敏、食物过敏等"
+                  value="{{emergencyInfo.allergies}}"
+                  bindinput="onInput"
+                  data-field="allergies"/>
+      </view>
+    </view>
+
+    <!-- 基础疾病 -->
+    <view class="form-group">
+      <view class="form-item">
+        <view class="form-label">基础疾病</view>
+        <textarea class="form-textarea" 
+                  placeholder="请填写您的基础疾病，如高血压、糖尿病等"
+                  value="{{emergencyInfo.basicDiseases}}"
+                  bindinput="onInput"
+                  data-field="basicDiseases"/>
+      </view>
+    </view>
+
+    <!-- 手术/植入物史 -->
+    <view class="form-group">
+      <view class="form-item">
+        <view class="form-label">手术/植入物史</view>
+        <textarea class="form-textarea" 
+                  placeholder="请填写您的手术史或植入物信息，如心脏支架、人工关节等"
+                  value="{{emergencyInfo.surgeryHistory}}"
+                  bindinput="onInput"
+                  data-field="surgeryHistory"/>
+      </view>
+    </view>
+
+    <!-- 用药情况 -->
+    <view class="form-group">
+      <view class="form-item">
+        <view class="form-label">用药情况</view>
+        <textarea class="form-textarea" 
+                  placeholder="请填写您目前正在服用的药物信息，包括剂量和用法"
+                  value="{{emergencyInfo.medication}}"
+                  bindinput="onInput"
+                  data-field="medication"/>
+      </view>
+    </view>
+
+    <!-- 急救备注 -->
+    <view class="form-group">
+      <view class="form-item">
+        <view class="form-label">急救备注</view>
+        <textarea class="form-textarea" 
+                  placeholder="请填写其他急救相关的重要信息"
+                  value="{{emergencyInfo.emergencyNotes}}"
+                  bindinput="onInput"
+                  data-field="emergencyNotes"/>
+      </view>
+    </view>
+
+    <!-- 提交按钮 -->
+    <button wx:if="{{formChanged}}" class="submit-btn" bindtap="onSubmit">
+      保存信息
+    </button>
+  </form>
+</view> 
