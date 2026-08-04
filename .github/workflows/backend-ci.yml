@@ -37,11 +37,8 @@ jobs:
           cache: maven
           cache-dependency-path: 后端/mini_program_backend/pom.xml
 
-      - name: Make Maven wrapper executable
-        run: chmod +x mvnw
-
       - name: Verify backend
-        run: ./mvnw --batch-mode --no-transfer-progress clean verify
+        run: mvn --batch-mode --no-transfer-progress clean verify
 
       - name: Upload test reports on failure
         if: failure()
