@@ -1,231 +1,216 @@
-# 🏥 Smart Elderly Care — 智慧养老微信小程序
+# Smart Elderly Care — 智慧养老微信小程序
 
-> **Java Spring Boot 多角色智慧养老服务平台**  
-> 面向老年人的 O2O 服务微信小程序后端，支持老人、监护人、服务人员三种角色，覆盖从预约下单到服务评价的完整服务闭环。
+> Java 17 + Spring Boot 3 + 原生微信小程序的多角色养老服务平台。
 
-> ⚠️ **贡献说明**：本仓库为团队项目，本人负责后端开发、API 设计、数据库设计及前后端联调对接，非唯一贡献者。详细分工见项目文档。
+> **贡献说明**：本仓库为团队项目。本人主要负责后端开发、API 与数据库设计、权限和状态流转，以及前后端联调；并非唯一贡献者。
 
----
+## 1. 项目定位
 
-## 1. 📌 项目一句话定位
+平台面向老人、监护人和服务人员，覆盖：
 
-**Java Spring Boot 多角色智慧养老服务平台后端** — 基于 Spring Boot 3 + JPA + MySQL + JWT 构建，微信小程序原生前端。实现老人/监护人/服务人员的多角色服务预约、状态流转、绑定关系和紧急救助，覆盖从创建到评价的完整服务生命周期。
+- 微信静默登录与 JWT 鉴权；
+- 老人—监护人绑定；
+- 服务创建、接单、进行、支付、评价；
+- 紧急医疗信息和求助；
+- 原生微信小程序页面与 Spring Boot REST API。
 
----
+当前重点不是继续堆功能，而是建立可重复的构建、测试、启动和发布证据。
 
-## 2. 🖼️ Screenshots / Demo
+## 2. 技术栈
 
-| 角色 | 入口 | 核心页面 |
-|------|------|---------|
-| 👴 老人 | 首页 · 服务列表 · 紧急呼救 | 首页看板、服务详情、评价、紧急医疗信息、绑定管理 |
-| 👨‍👩‍👧 监护人 | 首页 · 绑定管理 · 创建服务 | 创建服务、服务列表、绑定家人、投诉建议 |
-| 👷 服务人员 | 服务任务列表 · 服务详情 | 任务列表、服务详情、上传记录 |
+| 层级 | 技术 |
+|---|---|
+| 后端 | Java 17、Spring Boot 3.4.6、Spring Data JPA、Actuator |
+| 数据库 | MySQL 8；测试使用 H2 MySQL 兼容模式 |
+| 认证 | JJWT 0.11.5，HS256，密钥由 `JWT_SECRET` 注入 |
+| 前端 | 原生微信小程序（JS / WXML / WXSS） |
+| 构建 | Maven、Node.js 22 校验与小程序打包脚本 |
+| 容器 | Docker Compose：MySQL + Spring Boot 后端 |
+| CI | 后端 Maven Verify、前端结构/语法/打包、Compose 启动冒烟 |
 
-> 📱 在微信开发者工具中导入 `前端/miniprogram-1/miniprogram-1` 并编译预览。
-> 📹 Demo 视频待录制。
+## 3. 目录
 
----
-
-## 3. ⚡ Tech Stack
-
-| 层级 | 技术 | 版本 | 状态 |
-|------|------|------|------|
-| **语言** | Java | 17 | ✅ |
-| **框架** | Spring Boot | 3.4.6 | ✅ |
-| **ORM** | Spring Data JPA (Hibernate) | — | ✅ |
-| **数据库** | MySQL | 8.x | ✅ |
-| **认证** | JWT (jjwt) | 0.11.5 | ✅ |
-| **HTTP 客户端** | Hutool HTTP | 5.8.13 | ✅ |
-| **代码简化** | Lombok | 1.18.30 | ✅ |
-| **JSON 处理** | Jackson | 2.15.2 | ✅ |
-| **构建** | Maven (mvnw wrapper) | — | ✅ |
-| **缓存** | Redis | — | 📌 待接入 |
-| **容器化** | Docker Compose | — | 📌 待接入 |
-| **API 文档** | SpringDoc OpenAPI / Swagger | — | 📌 待接入 |
-
----
-
-## 4. 🎯 Core Features
-
-| 功能 | 说明 | 涉及角色 |
-|------|------|---------|
-| **微信静默登录** | wx.login() → jscode2session → JWT，用户无感认证 | 全部 |
-| **JWT 鉴权** | Token 解析验证，1 小时过期 | 全部 |
-| **多角色注册** | 老人(0)、监护人(1)、日常员工(2)、护理员工(3)、精神服务员工(4) | 全部 |
-| **服务预约** | 指定服务类型/时间/地址，为已绑定老人创建 | 老人、监护人 |
-| **服务状态流转** | 未指派(0) → 待进行(1) → 进行中(2) → 待支付(3) → 待评价(4) → 已完成(5) | 全部 |
-| **服务支付** | 状态校验后更新为待评价 | 老人、监护人 |
-| **服务评价** | 1-5 星评分 + 文本评价 | 老人、监护人 |
-| **老人-监护人绑定** | 手机号搜索 → 发起申请 → 对方确认/拒绝 → 已绑定/已解除 | 老人、监护人 |
-| **紧急医疗信息** | 血型、过敏史、基础疾病、手术史、用药情况 | 老人 |
-| **紧急求助** | 一键发送 GPS 位置 + 求助消息到服务器 | 老人 |
-
----
-
-## 5. 🏗️ Architecture
-
-### 分层架构
-
-```
-请求 → Controller（接收/校验） → Service（业务+权限） → Repository（JPA 自动 SQL） → MySQL
-         ↑                                                                         ↑
-         └────────────── JWT 鉴权（Token 解析） ───────────────────────────────────┘
+```text
+smart-elderly-care/
+├─ 前端/miniprogram-1/miniprogram-1/   # 原生微信小程序
+├─ 后端/mini_program_backend/           # Spring Boot 后端
+├─ .github/workflows/                   # 自动化门禁
+├─ .env.example                         # 无真实密钥的本地模板
+└─ docker-compose.yml                   # MySQL + 后端
 ```
 
-### 代码组织
+本批保留现有中文目录，避免同时破坏微信开发者工具导入路径、历史文档和 CI。后续若迁移为 `frontend/backend`，应单独提交并保留兼容说明。
 
-```
-src/main/java/com/hecs/mini_program_backend/
-├── MiniProgramBackendApplication.java    # 启动类
-├── config/                               # 配置类（微信 CORS）
-├── controller/                           # 5 个 @RestController
-│   ├── LoginController.java              # POST /login 微信登录
-│   ├── SignUpController.java             # POST /signup 注册/注销
-│   ├── ServiceController.java            # /api/services/* CRUD+评价+支付
-│   ├── BindController.java               # /api/bindings/* 绑定关系
-│   └── EmergencyController.java          # /api/emergency/* 紧急救助
-├── entity/                               # 4 个 JPA @Entity
-├── mapper/                               # 4 个 JpaRepository
-├── service/                              # 业务逻辑接口+实现
-└── utils/                                # JWT Token 生成/解析
-```
+## 4. 一键启动：Docker Compose
 
----
-
-## 6. 💾 Database Design
-
-```mermaid
-erDiagram
-    User ||--o{ Service : "创建/服务对象/服务人员"
-    User ||--o{ UserBind : "老人/监护人"
-    User ||--o{ Emergency : "老人医疗信息"
-
-    User { int id PK; string open_id; int user_type "0老人 1监护人 2-4员工 99未注册" }
-    Service { int service_id PK; int service_type; int service_status "0未指派 ~ 5已完成"; int creator_id FK; int target_id FK; int provider_id FK; datetime scheduled_time }
-    UserBind { int bind_id PK; int elder_id FK; int guardian_id FK; int initiator_id FK; int bind_status "0待确认 1已绑定 2已拒绝" }
-    Emergency { int emergency_id PK; int user_id FK; string blood_type; string allergies }
-```
-
-| 表名 | 说明 | 核心字段 |
-|------|------|---------|
-| `user` | 用户表（多角色合一） | open_id, user_type, nickname, phone_number |
-| `service` | 服务订单表 | service_type, service_status, creator_id, target_id, provider_id |
-| `user_bind` | 绑定关系 | elder_id, guardian_id, initiator_id, bind_status |
-| `emergency` | 紧急医疗信息 | user_id, blood_type, allergies, basic_diseases |
-
----
-
-## 7. 🌐 API Overview
-
-| 模块 | 方法 | 路径 | 说明 |
-|------|------|------|------|
-| **用户认证** | POST | `/login` | 微信登录（code → JWT） |
-| | POST | `/signup` | 注册/完善信息 |
-| **服务管理** | GET | `/api/services` | 服务列表（分页） |
-| | GET | `/api/services/{id}` | 服务详情 |
-| | POST | `/api/services/create` | 创建服务 |
-| | POST | `/api/services/update/{id}` | 更新服务 |
-| | POST | `/api/services/cancel/{id}` | 取消服务 |
-| | POST | `/api/services/evaluate/{id}` | 评价服务 |
-| | POST | `/api/services/payment/{id}` | 支付服务 |
-| **绑定管理** | GET | `/api/bindings` | 绑定列表 |
-| | POST | `/api/bindings/create` | 创建绑定 |
-| | PUT | `/api/bindings/{id}/status` | 更新绑定状态 |
-| | POST | `/api/bindings/delete/{id}` | 解除绑定 |
-| **紧急救助** | GET | `/api/emergency/info` | 获取紧急信息 |
-| | POST | `/api/emergency/update` | 更新紧急信息 |
-| | POST | `/api/emergency/help` | 发送求助 |
-
----
-
-## 8. 🚀 Quick Start
+无需真实微信 AppID/Secret 即可启动数据库、后端和健康检查；只有真实 `wx.login` 才需要有效微信凭据。
 
 ```bash
-# ① 克隆
 git clone https://github.com/2002yy/smart-elderly-care.git
 cd smart-elderly-care
 
-# ② 启动数据库
-docker compose up -d mysql
+cp .env.example .env
+docker compose up -d --build
 
-# ③ 配置后端
+curl http://127.0.0.1:8081/actuator/health
+```
+
+预期返回：
+
+```json
+{"status":"UP"}
+```
+
+查看日志与停止：
+
+```bash
+docker compose logs -f backend
+docker compose down --volumes
+```
+
+`.env` 已被忽略。生产环境必须替换：
+
+- `MYSQL_ROOT_PASSWORD`
+- `WECHAT_APPID`
+- `WECHAT_APPSECRET`
+- `JWT_SECRET`（至少 32 字符的独立随机值）
+
+## 5. 非 Docker 后端启动
+
+```bash
 cd 后端/mini_program_backend
-cp src/main/resources/application.properties.example src/main/resources/application.properties
-# 编辑 application.properties，填入微信 appid/secret
+cp src/main/resources/application.properties.example \
+   src/main/resources/application.properties
 
-# ④ 启动后端
-./mvnw spring-boot:run
-# 看到 "Tomcat started on port 8081" 即成功
-
-# ⑤ 前端：微信开发者工具 → 导入 前端/miniprogram-1/miniprogram-1
+export JWT_SECRET='replace-with-at-least-32-characters'
+mvn spring-boot:run
 ```
 
-### application.properties 示例
+本地模板中的微信值仅用于完成应用启动和健康检查，不会让真实微信登录成功。
 
-```properties
-spring.datasource.url=jdbc:mysql://localhost:3306/MiniApp?serverTimezone=Asia/Shanghai
-spring.datasource.username=root
-spring.datasource.password=root
-spring.jpa.hibernate.ddl-auto=update
-wechat.appid=你的AppID
-wechat.appsecret=你的AppSecret
-server.port=8081
+## 6. 小程序校验与发布目录
+
+小程序不依赖第三方前端框架。Node 脚本负责：
+
+- 检查 `app.json`；
+- 检查每个注册页面的 `.js/.json/.wxml/.wxss`；
+- 校验全部 JSON 与 JavaScript 语法；
+- 排除 `project.private.config.json`；
+- 生成可导入的 `dist/` 和构建清单；
+- 将 API 地址写入构建产物，而不是把公网地址硬编码进源码。
+
+```bash
+cd 前端/miniprogram-1/miniprogram-1
+npm ci
+npm run check
+
+MINIPROGRAM_API_BASE_URL=https://api.example.com npm run build
 ```
 
----
+随后在微信开发者工具中导入：
 
-## 9. 🧪 Testing / CI
+```text
+前端/miniprogram-1/miniprogram-1/dist
+```
 
-| 类型 | 覆盖 | 状态 |
-|------|------|------|
-| 手工测试用例 38 个 | 3 角色 + 4 功能模块 | ✅ |
-| JUnit 单元测试 | Service 层 | 📌 待补 |
-| MockMvc 集成测试 | Controller 层 | 📌 待补 |
-| GitHub Actions CI | 自动构建+测试 | 📌 待补 |
+源码开发默认 API 为 `http://127.0.0.1:8081`。
 
----
+## 7. 核心服务状态
 
-## 10. 🗺️ Roadmap
+```text
+0 未指派
+1 待进行
+2 进行中
+3 待支付
+4 待评价
+5 已完成
+```
 
-### 已实现
-- [x] 微信静默登录 + JWT 无状态认证
-- [x] 多角色注册（老人/监护人/员工）
-- [x] 服务完整生命周期（创建→执行→支付→评价）
-- [x] 老人-监护人双向绑定
-- [x] 紧急救助（定位 + 医疗信息）
-- [x] 16 个 RESTful API 端点
-- [x] 38 个手工测试用例
+关键权限合同包括：
 
-### 待补方向
+- 非服务参与者不能取消或评价；
+- 支付只能从状态 3 进入状态 4；
+- 评价只能从状态 4 进入状态 5；
+- 无效或过期 JWT 返回 401；
+- 创建服务必须提供对象、类型、时间和地址。
 
-| 方向 | 优先级 | 说明 |
-|------|--------|------|
-| **JUnit / MockMvc 最小测试** | P0 | Service 层 + Controller 层核心流程覆盖 |
-| **OpenAPI 接口文档** | P1 | SpringDoc + Swagger UI，自动生成 |
-| **Redis 缓存** | P1 | 验证码/登录态辅助/热点服务缓存 |
-| **Docker Compose 完整后端 + MySQL** | P2 | Spring Boot JAR + MySQL 一键编排 |
-| **GitHub Actions CI** | P1 | push 时自动 mvn verify + lint |
-| **微信支付接入** | P2 | 替换模拟支付 |
-| **紧急求助推送** | P2 | 微信模板通知监护人 |
+## 8. 主要 API
 
----
+| 模块 | 方法 | 路径 |
+|---|---|---|
+| 登录 | POST | `/login` |
+| 注册 | POST | `/signup` |
+| 服务列表 | GET | `/api/services` |
+| 服务详情 | GET | `/api/services/{id}` |
+| 创建服务 | POST | `/api/services/create` |
+| 更新服务 | POST | `/api/services/update/{id}` |
+| 取消服务 | POST | `/api/services/cancel/{id}` |
+| 支付 | POST | `/api/services/payment/{id}` |
+| 评价 | POST | `/api/services/evaluate/{id}` |
+| 绑定 | GET/POST/PUT | `/api/bindings/**` |
+| 紧急信息 | GET/POST | `/api/emergency/**` |
 
-## 11. 📄 Portfolio Notes
+详细字段见前后端目录中的 `API_Documentation.md`。
 
-### 作品集说明
+## 9. 测试与 CI
 
-本仓库是 **Java 后端开发求职主项目之一**，重点展示：
+### 后端门禁
 
-| 能力维度 | 体现 |
-|---------|------|
-| **Spring Boot 工程化** | 分层架构、自动配置、JPA ORM、CORS |
-| **RESTful API** | 16 个接口，资源导向 URL |
-| **JWT 认证** | 微信静默登录 → JWT 无状态认证 |
-| **多角色权限** | 5 种用户类型，前端+后端双重校验 |
-| **数据库设计** | 4 表，多角色合一 user 表 |
-| **状态机思维** | 6 状态流转 + 合法性校验 |
-| **前后端联调** | 38 测试用例，接口文档，字段兼容 |
+```bash
+cd 后端/mini_program_backend
+mvn --batch-mode --no-transfer-progress clean verify
+```
 
-### License
+覆盖内容包括：
+
+- Spring 上下文与 H2 数据库；
+- JWT 无效请求；
+- 服务取消、支付和评价权限；
+- 服务状态合法流转；
+- 真实 Controller → Service → Repository → H2 的创建与查询闭环；
+- `/login` 缺少 code 时不调用微信外部接口。
+
+### 全栈门禁
+
+`Full Stack CI` 同时验证：
+
+1. 原生小程序 `npm ci`、结构校验和发布目录构建；
+2. Docker Compose 配置可解析；
+3. MySQL 健康后启动后端；
+4. `/actuator/health` 返回 `UP`；
+5. `/login` 空请求保持 400 合同；
+6. 失败时上传日志，结束时销毁容器与卷。
+
+## 10. 安全与配置边界
+
+- 不提交 `.env`、`application.properties` 或微信私有项目配置；
+- 仓库只保留 `.env.example` 和 `application.properties.example`；
+- JWT 签发与解析必须使用同一个环境密钥；
+- 小程序源码不再包含固定公网服务器 IP；
+- Compose 中的默认密码只用于本地开发，不可用于公网部署；
+- 微信 AppSecret 不应出现在日志或客户端代码中。
+
+## 11. 作品集价值
+
+该项目用于展示：
+
+- Spring Boot 分层与 JPA 持久化；
+- 多角色权限和资源归属校验；
+- 六状态业务流程；
+- JWT 无状态认证；
+- 原生微信小程序联调；
+- H2 集成测试、Docker Compose 和 GitHub Actions；
+- 从“课程项目可运行”到“工程交付可复核”的整改过程。
+
+## 12. 待完成
+
+- 真实微信测试账号端到端登录；
+- 微信开发者工具自动化或人工真机验收记录；
+- OpenAPI 文档；
+- 生产数据库迁移工具；
+- 正式演示视频与部署说明；
+- 将 Controller 中残留的业务逻辑继续下沉到 Service 层。
+
+## License
 
 MIT License
