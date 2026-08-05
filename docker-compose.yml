@@ -1,13 +1,11 @@
-version: '3.8'
-
 services:
-  # ========== MySQL 数据库 ==========
   mysql:
     image: mysql:8.0
     container_name: smart_elderly_mysql
+    restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: MiniApp
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-local-root-password}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-MiniApp}
       MYSQL_CHARACTER_SET_SERVER: utf8mb4
       MYSQL_COLLATION_SERVER: utf8mb4_unicode_ci
     ports:
@@ -16,17 +14,42 @@ services:
       - mysql_data:/var/lib/mysql
     command: --default-authentication-plugin=mysql_native_password
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
-      interval: 10s
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -p$${MYSQL_ROOT_PASSWORD} --silent"]
+      interval: 5s
       timeout: 5s
-      retries: 5
+      retries: 20
+      start_period: 15s
 
-  # ========== Redis（可选，目前项目未使用） ==========
-  # redis:
-  #   image: redis:7-alpine
-  #   container_name: smart_elderly_redis
-  #   ports:
-  #     - "6379:6379"
+  backend:
+    build:
+      context: ./后端/mini_program_backend
+      dockerfile: Dockerfile
+    container_name: smart_elderly_backend
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      SPRING_APPLICATION_NAME: mini_program_backend
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE:-MiniApp}?serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD:-local-root-password}
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SPRING_JPA_OPEN_IN_VIEW: "false"
+      SPRING_JACKSON_TIME_ZONE: Asia/Shanghai
+      WECHAT_APPID: ${WECHAT_APPID:-local-placeholder-appid}
+      WECHAT_APPSECRET: ${WECHAT_APPSECRET:-local-placeholder-appsecret}
+      JWT_SECRET: ${JWT_SECRET:-change-this-local-jwt-secret-32chars}
+      SERVER_PORT: 8081
+      MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: health,info
+    ports:
+      - "${BACKEND_PORT:-8081}:8081"
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://localhost:8081/actuator/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 30s
 
 volumes:
   mysql_data:
