@@ -1,0 +1,123 @@
+name: Full Stack CI
+
+on:
+  push:
+    branches:
+      - main
+      - agent/**
+    paths:
+      - '前端/miniprogram-1/miniprogram-1/**'
+      - '后端/mini_program_backend/**'
+      - 'docker-compose.yml'
+      - '.env.example'
+      - '.github/workflows/full-stack-ci.yml'
+  pull_request:
+    paths:
+      - '前端/miniprogram-1/miniprogram-1/**'
+      - '后端/mini_program_backend/**'
+      - 'docker-compose.yml'
+      - '.env.example'
+      - '.github/workflows/full-stack-ci.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  frontend-package:
+    name: Native mini program package
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: 前端/miniprogram-1/miniprogram-1
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: 前端/miniprogram-1/miniprogram-1/package-lock.json
+
+      - name: Install frontend tooling
+        run: npm ci
+
+      - name: Validate source tree
+        run: npm run check
+
+      - name: Build production package
+        env:
+          MINIPROGRAM_API_BASE_URL: https://ci.example.invalid
+        run: npm run build
+
+      - name: Verify package boundary
+        run: |
+          test -f dist/build-manifest.json
+          test -f dist/app.json
+          test ! -e dist/project.private.config.json
+          grep -q 'https://ci.example.invalid' dist/config.js
+
+      - name: Upload mini program package
+        uses: actions/upload-artifact@v4
+        with:
+          name: mini-program-dist
+          path: 前端/miniprogram-1/miniprogram-1/dist/
+          retention-days: 7
+
+  compose-smoke:
+    name: Backend + MySQL startup smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Prepare local environment
+        run: cp .env.example .env
+
+      - name: Validate Compose model
+        run: docker compose config --quiet
+
+      - name: Build and start stack
+        run: docker compose up -d --build
+
+      - name: Wait for backend health
+        run: |
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent http://127.0.0.1:8081/actuator/health | grep -q '"status":"UP"'; then
+              exit 0
+            fi
+            sleep 5
+          done
+          echo 'Backend did not become healthy in time.' >&2
+          exit 1
+
+      - name: Verify login validation contract
+        run: |
+          status=$(curl --silent --output /tmp/login-response.json --write-out '%{http_code}' \
+            --header 'Content-Type: application/json' \
+            --data '{}' \
+            http://127.0.0.1:8081/login)
+          test "$status" = '400'
+          grep -q 'code不能为空' /tmp/login-response.json
+
+      - name: Capture stack logs on failure
+        if: failure()
+        run: docker compose logs --no-color > compose-smoke.log
+
+      - name: Upload smoke logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: compose-smoke-logs
+          path: compose-smoke.log
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Stop stack
+        if: always()
+        run: docker compose down --volumes --remove-orphans
