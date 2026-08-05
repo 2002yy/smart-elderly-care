@@ -1,55 +1,40 @@
 package com.hecs.mini_program_backend.utils;
 
+import io.jsonwebtoken.JwtBuilder;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
 
-import io.jsonwebtoken.*;
-import io.jsonwebtoken.security.Keys;
-
-import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Date;
 import java.util.UUID;
 import javax.crypto.SecretKey;
 
 public class TokenGenerate {
-    private final long time = 1000*60*60;
-    private final String signature = "com.hecs.mini_program_backend.utils";
+    private final long time = 1000 * 60 * 60;
 
-    public String TokenGenerate(String openid){
-        JwtBuilder jwtBuilder = Jwts.builder();
-        // Create a proper key from the signature string
-        SecretKey key = Keys.hmacShaKeyFor(signature.getBytes(StandardCharsets.UTF_8));
-        
-        String jwtToken = jwtBuilder
-                //Header
-                .setHeaderParam("typ","JWT")
-                .setHeaderParam("alg","HS256")
-                //payload
-                .claim("openid",openid)
-                .setExpiration(Date.from(Instant.now().plusMillis(time)))
-                .setId(UUID.randomUUID().toString())
-                .signWith(key, SignatureAlgorithm.HS256)
-                .compact();
-
-        return jwtToken;
+    public String TokenGenerate(String openid) {
+        return buildToken(openid, null);
     }
-    
-    public String TokenGenerate(String openid, Integer userType){
-        JwtBuilder jwtBuilder = Jwts.builder();
-        // Create a proper key from the signature string
-        SecretKey key = Keys.hmacShaKeyFor(signature.getBytes(StandardCharsets.UTF_8));
-        
-        String jwtToken = jwtBuilder
-                //Header
-                .setHeaderParam("typ","JWT")
-                .setHeaderParam("alg","HS256")
-                //payload
-                .claim("openid",openid)
-                .claim("user_type", userType)
+
+    public String TokenGenerate(String openid, Integer userType) {
+        return buildToken(openid, userType);
+    }
+
+    private String buildToken(String openid, Integer userType) {
+        SecretKey key = JwtKeyProvider.signingKey();
+        JwtBuilder jwtBuilder = Jwts.builder()
+                .setHeaderParam("typ", "JWT")
+                .setHeaderParam("alg", "HS256")
+                .claim("openid", openid)
                 .setExpiration(Date.from(Instant.now().plusMillis(time)))
-                .setId(UUID.randomUUID().toString())
+                .setId(UUID.randomUUID().toString());
+
+        if (userType != null) {
+            jwtBuilder.claim("user_type", userType);
+        }
+
+        return jwtBuilder
                 .signWith(key, SignatureAlgorithm.HS256)
                 .compact();
-
-        return jwtToken;
     }
 }

@@ -1,0 +1,13 @@
+{
+  "name": "smart-elderly-care-miniprogram",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "node tools/build-miniprogram.mjs --check",
+    "build": "node tools/build-miniprogram.mjs --build"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

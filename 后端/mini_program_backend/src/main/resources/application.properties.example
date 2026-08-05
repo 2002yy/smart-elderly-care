@@ -1,30 +1,34 @@
-spring.application.name=mini_program_backend
+spring.application.name=${SPRING_APPLICATION_NAME:mini_program_backend}
 
-# ========== MySQL 数据库配置 ==========
-# 本地开发：先用 docker-compose 启动 MySQL，或用本地/远程数据库
+# 本文件仅作为非 Docker 本地开发模板。Docker Compose 会直接通过环境变量注入同名配置。
+# 复制为 application.properties 后即可启动；真实微信登录前再替换 WECHAT_APPID/WECHAT_APPSECRET。
+
+# ========== MySQL ==========
 spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
-spring.datasource.url=jdbc:mysql://localhost:3306/MiniApp?serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
-spring.datasource.username=root
-spring.datasource.password=root
+spring.datasource.url=${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3306/MiniApp?serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true}
+spring.datasource.username=${SPRING_DATASOURCE_USERNAME:root}
+spring.datasource.password=${SPRING_DATASOURCE_PASSWORD:local-root-password}
 
 # ========== JPA / Hibernate ==========
-spring.jpa.hibernate.ddl-auto=update
+spring.jpa.hibernate.ddl-auto=${SPRING_JPA_HIBERNATE_DDL_AUTO:update}
 spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.MySQLDialect
-spring.jpa.show-sql=true
-spring.jpa.properties.hibernate.format_sql=true
+spring.jpa.show-sql=${SPRING_JPA_SHOW_SQL:false}
+spring.jpa.open-in-view=${SPRING_JPA_OPEN_IN_VIEW:false}
 
-# ========== 时区 ==========
-spring.jackson.time-zone=Asia/Shanghai
+# ========== 时区与端口 ==========
+spring.jackson.time-zone=${SPRING_JACKSON_TIME_ZONE:Asia/Shanghai}
+server.port=${SERVER_PORT:8081}
 
-# ========== 微信小程序配置 ==========
-# 从微信公众平台获取（https://mp.weixin.qq.com/）
-wechat.appid=你的微信小程序AppID
-wechat.appsecret=你的微信小程序AppSecret
+# ========== 微信小程序 ==========
+# 占位值允许应用完成启动和健康检查，但不能完成真实 wx.login 登录。
+wechat.appid=${WECHAT_APPID:local-placeholder-appid}
+wechat.appsecret=${WECHAT_APPSECRET:local-placeholder-appsecret}
 
-# ========== 服务器端口 ==========
-server.port=8081
+# ========== JWT ==========
+# 当前签发与解析从 JWT_SECRET 环境变量读取；生产值必须至少 32 字符且不可提交。
+jwt.secret=${JWT_SECRET:change-this-local-jwt-secret-32chars}
+jwt.expiration=${JWT_EXPIRATION:3600000}
 
-# ========== JWT 密钥配置 ==========
-# 生产环境请使用至少32位的随机字符串
-jwt.secret=abcdefghijklmnopqrstuvwxyz123456
-jwt.expiration=3600000
+# ========== 健康检查 ==========
+management.endpoints.web.exposure.include=${MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE:health,info}
+management.endpoint.health.show-details=never

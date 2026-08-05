@@ -1,13 +1,7 @@
-// config.js - 小程序的全局配置
-
-// 环境配置
-const ENV = 'dev';  // 可选值: 'dev', 'prod'
-
+// Source-tree development defaults.
+// `npm run build` replaces the dist copy with MINIPROGRAM_API_BASE_URL.
 const config = {
-  // 后端API基础URL - 根据环境选择不同的URL
-  baseUrl: ENV === 'dev' ? 'http://localhost:8081' : 'https://47.109.145.84:8081',
-  
-  // API端点
+  baseUrl: 'http://127.0.0.1:8081',
   apis: {
     login: '/login',
     services: '/api/services',
@@ -16,4 +10,4 @@ const config = {
   }
 };
 
-module.exports = config; 
+module.exports = config;
