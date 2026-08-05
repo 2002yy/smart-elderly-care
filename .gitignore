@@ -22,6 +22,9 @@ Thumbs.db
 Desktop.ini
 
 # === 敏感配置（含密码和密钥，绝对不能提交） ===
+.env
+.env.*
+!.env.example
 **/application.properties
 **/application-dev.properties
 **/application-prod.properties
@@ -30,8 +33,9 @@ Desktop.ini
 !**/application.properties.example
 
 # === 微信小程序 ===
-miniprogram-1/project.private.config.json
-miniprogram-1/node_modules/
+**/project.private.config.json
+**/node_modules/
+前端/miniprogram-1/miniprogram-1/dist/
 
 # === Node ===
 node_modules/
