@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - agent/**
     paths:
       - '前端/miniprogram-1/miniprogram-1/**'
       - '后端/mini_program_backend/**'

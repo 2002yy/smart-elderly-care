@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - agent/**
     paths:
       - '后端/mini_program_backend/**'
       - '.github/workflows/backend-ci.yml'
