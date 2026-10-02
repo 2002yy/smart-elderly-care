@@ -26,8 +26,56 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  changes:
+    name: Detect changed surfaces
+    runs-on: ubuntu-latest
+    outputs:
+      frontend: ${{ steps.filter.outputs.frontend }}
+      compose: ${{ steps.filter.outputs.compose }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+      - name: Classify changes
+        id: filter
+        shell: bash
+        env:
+          BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          frontend=false
+          compose=false
+
+          if [[ -z "${BASE_SHA}" || "${BASE_SHA}" =~ ^0+$ ]]; then
+            frontend=true
+            compose=true
+          else
+            git diff --name-only "${BASE_SHA}" "${HEAD_SHA}" > "${RUNNER_TEMP}/changed-files"
+            while IFS= read -r path; do
+              case "$path" in
+                前端/miniprogram-1/miniprogram-1/*)
+                  frontend=true
+                  ;;
+                后端/mini_program_backend/*|docker-compose.yml|.env.example)
+                  compose=true
+                  ;;
+                .github/workflows/full-stack-ci.yml)
+                  frontend=true
+                  compose=true
+                  ;;
+              esac
+            done < "${RUNNER_TEMP}/changed-files"
+          fi
+
+          echo "frontend=${frontend}" >> "$GITHUB_OUTPUT"
+          echo "compose=${compose}" >> "$GITHUB_OUTPUT"
+
   frontend-package:
     name: Native mini program package
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     defaults:
@@ -72,6 +120,8 @@ jobs:
 
   compose-smoke:
     name: Backend + MySQL startup smoke
+    needs: changes
+    if: needs.changes.outputs.compose == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 25
 
