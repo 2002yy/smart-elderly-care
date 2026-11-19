@@ -13,6 +13,7 @@ public interface ServiceService {
     Service getServiceById(Integer serviceId);
     Page<Service> getServicesByStatus(Integer status, Pageable pageable);
     Page<Service> getServicesForUser(Integer userId, Pageable pageable);
+    Page<Service> getServicesForUserByStatuses(Integer userId, List<Integer> statuses, Pageable pageable);
     List<Service> getServicesForUser(Integer userId);
     Service createService(Service service);
     Service updateService(Service service);

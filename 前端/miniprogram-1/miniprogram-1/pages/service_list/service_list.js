@@ -13,6 +13,7 @@ Page({
     isClientUser: false, // 是否为老人或监护人用户
     userType: 0, // 用户类型
     isLoading: true, // 是否正在加载数据
+    loadingMore: false,
     refreshing: false, // 是否正在下拉刷新
     page: 1,
     pageSize: 10,
@@ -82,7 +83,7 @@ Page({
 
   // 切换状态
   switchStatus(e) {
-    const status = e.currentTarget.dataset.status;
+    const status = Number(e.currentTarget.dataset.status);
     if (status === this.data.currentStatus) return;
     
     this.setData({
@@ -91,12 +92,12 @@ Page({
       hasMore: true
     });
     
-    this.filterServices();
+    this.loadServices(1);
   },
 
   // 根据当前状态筛选服务
   filterServices() {
-    const { services, currentStatus, page, pageSize } = this.data;
+    const { services, currentStatus } = this.data;
     let filtered = [];
     
     console.log('筛选服务，当前状态:', currentStatus, '服务列表:', services);
@@ -117,8 +118,7 @@ Page({
     console.log('筛选后的服务:', filtered);
     
     this.setData({
-      filteredServices: filtered.slice(0, page * pageSize),
-      hasMore: filtered.length > page * pageSize
+      filteredServices: filtered
     });
   },
 
@@ -189,13 +189,8 @@ Page({
 
   // 加载更多
   loadMore() {
-    if (!this.data.hasMore) return;
-    
-    this.setData({
-      page: this.data.page + 1
-    });
-    
-    this.filterServices();
+    if (!this.data.hasMore || this.data.isLoading || this.data.loadingMore) return;
+    this.loadServices(this.data.page + 1);
   },
 
   // 添加按钮触摸开始
@@ -216,11 +211,22 @@ Page({
   },
 
   // 加载服务列表
-  loadServices: function() {
+  loadServices: function(requestedPage = 1) {
     var that = this;
     var token = wx.getStorageSync('token');
+    var status = this.data.currentStatus;
+    var requestVersion = (this._serviceRequestVersion || 0) + 1;
+    this._serviceRequestVersion = requestVersion;
+
+    if (requestedPage === 1) {
+      this.setData({page: 1, hasMore: true, isLoading: true, loadingMore: false,
+                    services: [], filteredServices: []});
+    } else {
+      this.setData({loadingMore: true});
+    }
     
     if (!token) {
+      this.setData({isLoading: false, loadingMore: false});
       wx.showToast({
         title: '请先登录',
         icon: 'none'
@@ -228,18 +234,18 @@ Page({
       return;
     }
     
-    wx.showLoading({
-      title: '加载中...'
-    });
+    if (requestedPage === 1) wx.showLoading({title: '加载中...'});
     
     wx.request({
       url: app.globalData.baseUrl + '/api/services',
       method: 'GET',
+      data: {page: requestedPage, pageSize: this.data.pageSize, status: status},
       header: {
         'Authorization': token
       },
       success: function(res) {
-        wx.hideLoading();
+        if (requestVersion !== that._serviceRequestVersion) return;
+        if (requestedPage === 1) wx.hideLoading();
         
         if (res.statusCode === 200 && res.data && res.data.data) {
           console.log('获取服务列表成功:', res.data);
@@ -308,12 +314,17 @@ Page({
             return item;
           });
           
-          // 将服务列表保存到缓存
-          wx.setStorageSync('serviceInfo', services);
+          var loadedServices = requestedPage === 1 ? services : that.data.services.concat(services);
+          // 缓存与页面始终表示已从服务器取得的订单，而不是假设后续页存在。
+          wx.setStorageSync('serviceInfo', loadedServices);
           
           that.setData({
-            services: services,
-            isLoading: false
+            services: loadedServices,
+            page: requestedPage,
+            hasMore: requestedPage * that.data.pageSize < res.data.total,
+            isLoading: false,
+            loadingMore: false,
+            refreshing: false
           });
           
           // 过滤服务
@@ -322,7 +333,9 @@ Page({
           console.log('过滤后的服务列表:', that.data.filteredServices);
         } else {
           that.setData({
-            isLoading: false
+            isLoading: false,
+            loadingMore: false,
+            refreshing: false
           });
           
           wx.showToast({
@@ -332,10 +345,13 @@ Page({
         }
       },
       fail: function(err) {
-        wx.hideLoading();
+        if (requestVersion !== that._serviceRequestVersion) return;
+        if (requestedPage === 1) wx.hideLoading();
         
         that.setData({
-          isLoading: false
+          isLoading: false,
+          loadingMore: false,
+          refreshing: false
         });
         
         console.error('获取服务列表失败:', err);

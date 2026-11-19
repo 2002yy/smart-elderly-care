@@ -134,6 +134,50 @@ class CriticalUserJourneyIntegrationTest {
     }
 
     @Test
+    void statusFilteredPagesReturnAllOrdersWithoutLeakingOtherUsers() throws Exception {
+        User owner = saveUser("ci-paged-owner", 0, "分页测试老人");
+        User other = saveUser("ci-paged-other", 0, "另一位老人");
+        for (int i = 0; i < 12; i++) {
+            Service service = new Service();
+            service.setCreatorId(owner.getId());
+            service.setTargetId(owner.getId());
+            service.setProviderId(0);
+            service.setServiceType(1);
+            service.setServiceStatus(i == 11 ? 5 : i % 2); // 11 个待进行，1 个真正已完成
+            serviceRepository.save(service);
+        }
+        Service unrelated = new Service();
+        unrelated.setCreatorId(other.getId());
+        unrelated.setTargetId(other.getId());
+        unrelated.setProviderId(0);
+        unrelated.setServiceStatus(0);
+        unrelated.setServiceType(1);
+        serviceRepository.saveAndFlush(unrelated);
+
+        String authorization = "Bearer " + new TokenGenerate().TokenGenerate(owner.getOpenId(), owner.getUserType());
+        mockMvc.perform(get("/api/services")
+                        .header("Authorization", authorization)
+                        .param("status", "1").param("page", "1").param("pageSize", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.total").value(11))
+                .andExpect(jsonPath("$.data.length()").value(10));
+
+        mockMvc.perform(get("/api/services")
+                        .header("Authorization", authorization)
+                        .param("status", "1").param("page", "2").param("pageSize", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.total").value(11))
+                .andExpect(jsonPath("$.data.length()").value(1));
+
+        mockMvc.perform(get("/api/services")
+                        .header("Authorization", authorization)
+                        .param("status", "5").param("page", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.total").value(1))
+                .andExpect(jsonPath("$.data[0].status").value(5));
+    }
+
+    @Test
     void loginValidationRejectsMissingWechatCodeWithoutCallingExternalApi() throws Exception {
         mockMvc.perform(post("/login")
                         .contentType(MediaType.APPLICATION_JSON)

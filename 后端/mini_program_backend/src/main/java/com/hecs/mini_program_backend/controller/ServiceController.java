@@ -13,6 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -133,9 +134,16 @@ public class ServiceController {
             if (user == null) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "用户不存在"));
             }
+
+            if (page < 1 || pageSize < 1 || pageSize > 100 || (status != null && (status < 0 || status > 5))) {
+                return ResponseEntity.badRequest().body(Map.of("message", "无效的页码、每页数量或服务状态"));
+            }
             
-            Pageable pageable = PageRequest.of(page - 1, pageSize);
-            Page<Service> servicePage = serviceService.getServicesForUser(user.getId(), pageable);
+            Pageable pageable = PageRequest.of(page - 1, pageSize, Sort.by(Sort.Direction.DESC, "serviceId"));
+            Page<Service> servicePage = status == null
+                    ? serviceService.getServicesForUser(user.getId(), pageable)
+                    : serviceService.getServicesForUserByStatuses(user.getId(),
+                            status == 1 ? List.of(0, 1) : List.of(status), pageable);
             
             List<Map<String, Object>> serviceList = servicePage.getContent().stream()
                 .map(this::createServiceResponseMap)
