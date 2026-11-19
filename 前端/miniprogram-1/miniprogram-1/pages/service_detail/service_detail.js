@@ -49,6 +49,10 @@ Page({
     showPayBtn: false, // 是否显示支付按钮
     showEvaluateBtn: false, // 是否显示评价按钮
     showApplicantsBtn: false,
+    showStartBtn: false,
+    showRequestCompletionBtn: false,
+    showConfirmCompletionBtn: false,
+    awaitingCustomerConfirmation: false,
     applications: [],
     applicationsLoaded: false,
     approvingApplication: false,
@@ -75,7 +79,8 @@ Page({
     if (options.id) {
       this.setData({ serviceId: options.id });
       console.log('正在加载服务详情，ID:', options.id);
-      this.loadServiceData(options.id);
+      // 履约与隐私状态必须以服务端为准，不能优先使用可能过时的本地缓存。
+      this.fetchServiceFromServer(options.id);
     } else {
       wx.showToast({
         title: '服务ID不存在',
@@ -84,61 +89,6 @@ Page({
       setTimeout(function() {
         wx.navigateBack();
       }, 1500);
-    }
-  },
-  
-  // 加载服务数据
-  loadServiceData: function(serviceId) {
-    var cachedServices = wx.getStorageSync('serviceInfo') || [];
-    var service = null;
-    
-    // 从缓存中查找服务
-    for (var i = 0; i < cachedServices.length; i++) {
-      // 检查id或serviceId是否匹配
-      if (cachedServices[i].id === serviceId || cachedServices[i].serviceId === serviceId) {
-        service = cachedServices[i];
-        break;
-      }
-    }
-    
-    if (service) {
-      // 格式化时间
-      var formattedCreateTime = service.createTime ? formatDate(service.createTime) : '';
-      var formattedScheduledTime = service.scheduledTime ? formatDate(service.scheduledTime) : '';
-      
-      // 获取服务类型文本
-      var typeText = '';
-      switch(parseInt(service.type)) {
-        case 0: typeText = '生活照料'; break;
-        case 1: typeText = '医疗护理'; break;
-        case 2: typeText = '心理护理'; break;
-        default: typeText = '未知类型';
-      }
-      
-      // 设置服务数据
-      this.setData({
-        serviceData: {
-          id: service.id || service.serviceId || '',
-          type: service.type || service.serviceType || '',
-          typeText: typeText,
-          scheduledTime: formattedScheduledTime,
-          address: service.address || service.appointedAddress || '',
-          remark: service.remark || service.serviceDes || '',
-          status: service.status !== undefined ? service.status : (service.serviceStatus || 1),
-          statusText: this.data.statusMap[service.status !== undefined ? service.status : service.serviceStatus] || '待进行',
-          creator: service.creator || service.creatorName || '未知',
-          createTime: formattedCreateTime,
-          staff: service.staffName || service.providerName || '未分配',
-          targetId: service.targetId || '',
-          targetName: service.targetName || '未知'
-        }
-      });
-      
-      // 根据用户类型和服务状态决定显示哪些按钮
-      this.updateButtonDisplay();
-    } else {
-      // 未找到服务，尝试从服务器获取
-      this.fetchServiceFromServer(serviceId);
     }
   },
   
@@ -204,7 +154,10 @@ Page({
                 createTime: formattedCreateTime,
                 staff: service.providerName || service.staffName || '未分配',
                 targetId: service.targetId || '',
-                targetName: service.targetName || '未知'
+                targetName: service.targetName || '未知',
+                serviceStartedAt: service.serviceStartedAt || null,
+                completionRequestedAt: service.completionRequestedAt || null,
+                completionConfirmedAt: service.completionConfirmedAt || null
               }
             });
             
@@ -291,10 +244,15 @@ Page({
     var showEvaluateBtn = false;
     var showUploadBtn = false;
     var showApplicantsBtn = false;
+    var showStartBtn = false;
+    var showRequestCompletionBtn = false;
+    var showConfirmCompletionBtn = false;
+    var awaitingCustomerConfirmation = false;
     
     // 客户用户（老人或监护人）
     if (userType === 0 || userType === 1) {
       showApplicantsBtn = status === 0;
+      showConfirmCompletionBtn = status === 2 && !!this.data.serviceData.completionRequestedAt;
       if (status === 0 || status === 1) {
         showModifyBtn = true; // 未指派或待进行状态可以修改
       } else if (status === 3) {
@@ -305,6 +263,9 @@ Page({
     } 
     // 服务人员
     else if (userType === 2 || userType === 3 || userType === 4) {
+      showStartBtn = status === 1;
+      showRequestCompletionBtn = status === 2 && !this.data.serviceData.completionRequestedAt;
+      awaitingCustomerConfirmation = status === 2 && !!this.data.serviceData.completionRequestedAt;
       if (status === 3 || status === 4) {
         showUploadBtn = true; // 服务人员在待支付或待评价状态可以上传服务记录
       }
@@ -315,8 +276,55 @@ Page({
       showPayBtn: showPayBtn,
       showEvaluateBtn: showEvaluateBtn,
       showUploadBtn: showUploadBtn,
-      showApplicantsBtn: showApplicantsBtn
+      showApplicantsBtn: showApplicantsBtn,
+      showStartBtn: showStartBtn,
+      showRequestCompletionBtn: showRequestCompletionBtn,
+      showConfirmCompletionBtn: showConfirmCompletionBtn,
+      awaitingCustomerConfirmation: awaitingCustomerConfirmation
     });
+  },
+
+  // 三个独立业务动作：服务端校验身份和前置状态，前端不伪造状态。
+  performFulfillmentAction: function(path, title, warning) {
+    if (this.data.isLoading) return;
+    wx.showModal({
+      title: title,
+      content: warning,
+      success: result => {
+        if (!result.confirm) return;
+        this.setData({ isLoading: true });
+        wx.request({
+          url: app.globalData.baseUrl + '/api/services/' + this.data.serviceId + '/' + path,
+          method: 'POST',
+          header: { Authorization: wx.getStorageSync('token') },
+          success: response => {
+            if (response.statusCode === 200) {
+              wx.showToast({ title: '操作已记录', icon: 'success' });
+              this.fetchServiceFromServer(this.data.serviceId);
+            } else {
+              wx.showToast({ title: '操作失败，请刷新订单', icon: 'none' });
+            }
+          },
+          fail: () => wx.showToast({ title: '网络请求失败', icon: 'none' }),
+          complete: () => this.setData({ isLoading: false })
+        });
+      }
+    });
+  },
+
+  onStartService: function() {
+    this.performFulfillmentAction('start', '声明开始服务',
+      '仅记录您的开始声明，系统不能证明您已经到场。请确认实际开始后再操作。');
+  },
+
+  onRequestCompletion: function() {
+    this.performFulfillmentAction('request-completion', '提交完工声明',
+      '此操作不代表服务已完成，仍需老人或监护人确认。');
+  },
+
+  onConfirmCompletion: function() {
+    this.performFulfillmentAction('confirm-completion', '确认服务已完成',
+      '请确认已实际收到服务；系统没有上传服务记录或到场证明。确认后进入待支付，但目前未开通真实支付。');
   },
 
   // 只向订单创建者/服务对象展示申请名单。身份是自报，批准不等于资质认证。

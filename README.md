@@ -131,6 +131,8 @@ MINIPROGRAM_API_BASE_URL=https://api.example.com npm run build
 - 非服务参与者不能读取详情、修改、取消或评价；
 - 服务人员只能从待分配池看到服务类型和预约时间；本人申请后仍无法查看私有详情，订单创建者或服务对象批准申请后才可读取；
 - `providerId` 并非充分授权依据，必须有对应的已批准申请记录；
+- 获批员工才能声明开始（1→2）及提交完工声明；老人/监护人确认后才进入待支付（2→3），各动作有服务端时间戳；
+- 取消订单与开始履约共用订单行锁，避免并发下删除已开始的订单；取消时清理关联接单申请；
 - **未接入真实支付**：状态 3 目前不能进入状态 4；旧支付接口返回 501，通用资料更新也不能代替支付确认；
 - 评价只能从状态 4 进入状态 5；
 - 无效或过期 JWT 返回 401；
@@ -148,6 +150,9 @@ MINIPROGRAM_API_BASE_URL=https://api.example.com npm run build
 | 员工申请接单 | POST | `/api/services/{id}/apply` |
 | 订单当事人查看申请 | GET | `/api/services/{id}/applications` |
 | 订单当事人批准申请 | POST | `/api/services/{id}/applications/{applicationId}/approve` |
+| 获批员工声明开始 | POST | `/api/services/{id}/start` |
+| 获批员工提交完工声明 | POST | `/api/services/{id}/request-completion` |
+| 老人/监护人确认完工 | POST | `/api/services/{id}/confirm-completion` |
 | 创建服务 | POST | `/api/services/create` |
 | 更新服务 | POST | `/api/services/update/{id}` |
 | 取消服务 | POST | `/api/services/cancel/{id}` |
@@ -172,8 +177,11 @@ MINIPROGRAM_API_BASE_URL=https://api.example.com npm run build
 
 **这不是正式运营的派单能力**：注册时的员工类型由用户自行选择，没有实名认证、资质核验或背景审查；
 老人批准意味着选择一名自报身份的申请者，**不代表平台认证其专业资格**。
-目前还没有开始服务、确认完工和可审计的履约证据，支付仍为 501。
-新 `service_application` 表在演示环境由 JPA 建立；正式数据库应先评审并执行受控迁移，不建议依赖生产环境自动 DDL。
+演示版增加了“员工声明开始 → 员工提交完工声明 → 当事人确认完工”的状态流转，
+记录服务端操作时间及确认人 ID。但**时间戳只证明有人点过按钮**，不能证明确实到场、服务质量或线下履约；
+目前没有位置核验、服务记录、争议处理或退款机制。确认完工只进入状态 3（待支付），绝不标记已付款。
+新 `service_application` 表及 `service` 上的履约字段在演示环境由 JPA 建立；
+正式数据库应先评审并执行受控迁移，不建议依赖生产环境自动 DDL。
 
 **服务记录限制**：当前没有服务端文件上传和持久化接口，小程序只显示“记录上传未开通”，
 不会选择文件后虚构“上传成功”；评价页也不会通过改本地缓存伪造待评价状态。

@@ -51,6 +51,12 @@
           <text>进行中</text>
           <view class="status-indicator" wx:if="{{currentStatus === 2}}"></view>
         </view>
+        <view class="status-item {{currentStatus === 3 ? 'active' : ''}}"
+              bindtap="switchStatus"
+              data-status="{{3}}">
+          <text>待支付</text>
+          <view class="status-indicator" wx:if="{{currentStatus === 3}}"></view>
+        </view>
         <view class="status-item {{currentStatus === 5 ? 'active' : ''}}"
               bindtap="switchStatus" 
               data-status="{{5}}">

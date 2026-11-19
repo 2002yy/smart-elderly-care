@@ -9,4 +9,5 @@ public interface ServiceApplicationRepository extends JpaRepository<ServiceAppli
     ServiceApplication findByServiceIdAndApplicantId(Integer serviceId, Integer applicantId);
     List<ServiceApplication> findByServiceIdOrderByApplicationIdAsc(Integer serviceId);
     boolean existsByServiceIdAndApplicantIdAndStatus(Integer serviceId, Integer applicantId, Integer status);
+    void deleteAllByServiceId(Integer serviceId);
 }

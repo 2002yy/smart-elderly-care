@@ -76,6 +76,10 @@
 
   <!-- 底部按钮区域 -->
   <view class="button-area">
+    <button wx:if="{{showStartBtn}}" class="action-btn" bindtap="onStartService" disabled="{{isLoading}}">声明开始服务</button>
+    <button wx:if="{{showRequestCompletionBtn}}" class="action-btn" bindtap="onRequestCompletion" disabled="{{isLoading}}">提交完工声明</button>
+    <view wx:if="{{awaitingCustomerConfirmation}}" class="application-warning">已提交完工声明，等待订单当事人确认。尚无到场或服务记录证据。</view>
+    <button wx:if="{{showConfirmCompletionBtn}}" class="action-btn" bindtap="onConfirmCompletion" disabled="{{isLoading}}">确认已收到服务</button>
     <!-- 修改服务按钮 - 老人/监护人 & 待进行状态 -->
     <button 
       wx:if="{{showModifyBtn}}" 

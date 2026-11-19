@@ -4,6 +4,7 @@ import com.hecs.mini_program_backend.entity.Service;
 import com.hecs.mini_program_backend.entity.ServiceApplication;
 import com.hecs.mini_program_backend.entity.User;
 import com.hecs.mini_program_backend.service.ServiceApplicationService;
+import com.hecs.mini_program_backend.service.ServiceFulfillmentService;
 import com.hecs.mini_program_backend.service.UserService;
 import com.hecs.mini_program_backend.utils.TokenParse;
 import io.jsonwebtoken.JwtException;
@@ -24,6 +25,9 @@ import java.util.Map;
 public class ServiceApplicationController {
     @Autowired
     private ServiceApplicationService applicationService;
+
+    @Autowired
+    private ServiceFulfillmentService fulfillmentService;
 
     @Autowired
     private UserService userService;
@@ -87,5 +91,31 @@ public class ServiceApplicationController {
         return ResponseEntity.ok(Map.of("success", true, "serviceId", service.getServiceId(),
                 "providerId", service.getProviderId(), "status", service.getServiceStatus(),
                 "message", "已批准接单，服务人员现可查看详情"));
+    }
+
+    @PostMapping("/{id}/start")
+    public ResponseEntity<?> start(@RequestHeader("Authorization") String token, @PathVariable Integer id) {
+        Service service = fulfillmentService.start(id, requester(token));
+        return ResponseEntity.ok(Map.of("serviceId", id, "status", service.getServiceStatus(),
+                "startedAt", service.getServiceStartedAt().toString(),
+                "message", "服务人员已声明开始；系统尚不能验证线下到场"));
+    }
+
+    @PostMapping("/{id}/request-completion")
+    public ResponseEntity<?> requestCompletion(@RequestHeader("Authorization") String token,
+                                                @PathVariable Integer id) {
+        Service service = fulfillmentService.requestCompletion(id, requester(token));
+        return ResponseEntity.ok(Map.of("serviceId", id, "status", service.getServiceStatus(),
+                "requestedAt", service.getCompletionRequestedAt().toString(),
+                "message", "已提交完工声明，等待老人或监护人确认"));
+    }
+
+    @PostMapping("/{id}/confirm-completion")
+    public ResponseEntity<?> confirmCompletion(@RequestHeader("Authorization") String token,
+                                                @PathVariable Integer id) {
+        Service service = fulfillmentService.confirmCompletion(id, requester(token));
+        return ResponseEntity.ok(Map.of("serviceId", id, "status", service.getServiceStatus(),
+                "confirmedAt", service.getCompletionConfirmedAt().toString(),
+                "message", "当事人已确认完工；支付尚未开通"));
     }
 }
