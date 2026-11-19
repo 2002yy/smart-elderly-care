@@ -23,6 +23,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -52,6 +53,86 @@ class ServiceControllerSecurityTest {
         mockMvc.perform(post("/api/services/payment/10")
                         .header("Authorization", "Bearer malformed-token"))
                 .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void unrelatedUserCannotReadServiceAddressOrNames() throws Exception {
+        User requester = user(99, "stranger");
+        Service service = service(10, 1, 2, 3, 0);
+        service.setAppointedAddress("老人家庭地址");
+        when(userService.getUserByOpenId("stranger")).thenReturn(requester);
+        when(serviceService.getServiceById(10)).thenReturn(service);
+
+        mockMvc.perform(get("/api/services/10")
+                        .header("Authorization", bearer("stranger", 0)))
+                .andExpect(status().isForbidden());
+
+        verify(userService, never()).getUserById(2);
+    }
+
+    @Test
+    void assignedProviderCanReadServiceDetail() throws Exception {
+        User requester = user(3, "provider");
+        Service service = service(10, 1, 2, 3, 0);
+        when(userService.getUserByOpenId("provider")).thenReturn(requester);
+        when(serviceService.getServiceById(10)).thenReturn(service);
+
+        mockMvc.perform(get("/api/services/10")
+                        .header("Authorization", bearer("provider", 2)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.serviceId").value(10));
+    }
+
+    @Test
+    void assignedProviderCannotEditClientDetails() throws Exception {
+        User requester = user(3, "provider");
+        Service service = service(10, 1, 2, 3, 0);
+        when(userService.getUserByOpenId("provider")).thenReturn(requester);
+        when(serviceService.getServiceById(10)).thenReturn(service);
+
+        mockMvc.perform(post("/api/services/update/10")
+                        .header("Authorization", bearer("provider", 2))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"address\":\"私自改地址\"}"))
+                .andExpect(status().isForbidden());
+
+        verify(serviceService, never()).updateService(any(Service.class));
+    }
+
+    @Test
+    void unrelatedUserCannotUpdateServiceOrForgeStatus() throws Exception {
+        User requester = user(99, "stranger");
+        Service service = service(10, 1, 2, 3, 0);
+        when(userService.getUserByOpenId("stranger")).thenReturn(requester);
+        when(serviceService.getServiceById(10)).thenReturn(service);
+
+        mockMvc.perform(post("/api/services/update/10")
+                        .header("Authorization", bearer("stranger", 0))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"address\":\"恶意覆盖\",\"status\":5,\"serviceStatus\":4}"))
+                .andExpect(status().isForbidden());
+
+        verify(serviceService, never()).updateService(any(Service.class));
+        org.junit.jupiter.api.Assertions.assertEquals(0, service.getServiceStatus());
+    }
+
+    @Test
+    void creatorCanStillUpdateServiceDetails() throws Exception {
+        User requester = user(1, "creator");
+        Service service = service(10, 1, 2, 3, 0);
+        when(userService.getUserByOpenId("creator")).thenReturn(requester);
+        when(serviceService.getServiceById(10)).thenReturn(service);
+        when(serviceService.updateService(any(Service.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        mockMvc.perform(post("/api/services/update/10")
+                        .header("Authorization", bearer("creator", 0))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"remark\":\"修改后的预约说明\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+
+        verify(serviceService).updateService(service);
+        org.junit.jupiter.api.Assertions.assertEquals("修改后的预约说明", service.getServiceDes());
     }
 
     @Test
