@@ -32,6 +32,16 @@ public class ServiceController {
     @Autowired
     private UserService userService;
 
+    private boolean isServiceParticipant(Service service, User user) {
+        if (user == null || user.getId() == null) {
+            return false;
+        }
+        Integer userId = user.getId();
+        return userId.equals(service.getCreatorId())
+                || userId.equals(service.getTargetId())
+                || userId.equals(service.getProviderId());
+    }
+
     private Map<String, Object> createServiceResponseMap(Service service) {
         try {
             Map<String, Object> serviceMap = new HashMap<>();
@@ -149,6 +159,9 @@ public class ServiceController {
             if (service == null) {
                 logger.warn("Service not found with ID: {}", serviceId);
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "服务不存在"));
+            }
+            if (!isServiceParticipant(service, user)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("message", "无权查看此服务"));
             }
             
             logger.info("Service found: ID={}, Type={}, Status={}", 
@@ -278,6 +291,9 @@ public class ServiceController {
             if (service == null) {
                 logger.warn("Service not found with ID: {}", id);
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "服务不存在"));
+            }
+            if (!isServiceParticipant(service, user)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("message", "无权修改此服务"));
             }
             
             // 记录更新前的状态
