@@ -426,9 +426,6 @@ Page({
             cachedServices[i].id === parseInt(serviceId) || 
             cachedServices[i].serviceId === parseInt(serviceId)) {
           found = true;
-          // 确保服务状态正确
-          cachedServices[i].status = 4;
-          cachedServices[i].serviceStatus = 4;
           break;
         }
       }
@@ -438,8 +435,6 @@ Page({
         var serviceData = this.data.serviceData;
         serviceData.id = serviceId;
         serviceData.serviceId = serviceId;
-        serviceData.status = 4;
-        serviceData.serviceStatus = 4;
         cachedServices.push(serviceData);
       }
       
@@ -471,72 +466,13 @@ Page({
     }
   },
   
-  // 上传服务记录
+  // 未接入文件接收与存储服务，不能模拟上传成功。
   onUploadRecord: function() {
-    var that = this;
-    
-    wx.chooseMessageFile({
-      count: 1,
-      type: 'file',
-      success: function(res) {
-        var tempFilePath = res.tempFiles[0].path;
-        var fileName = res.tempFiles[0].name;
-        
-        that.setData({
-          isLoading: true
-        });
-        
-        wx.showLoading({
-          title: '上传中...'
-        });
-        
-        // 模拟上传过程，3秒后完成
-        setTimeout(function() {
-          wx.hideLoading();
-          wx.showToast({
-            title: '上传成功',
-            icon: 'success'
-          });
-          
-          that.setData({
-            isLoading: false
-          });
-        }, 3000);
-      },
-      fail: function(err) {
-        console.error('选择文件失败:', err);
-      }
+    wx.showModal({
+      title: '记录上传未开通',
+      content: '当前没有服务端文件存储与确认接口，无法保存服务记录。',
+      showCancel: false
     });
-  },
-  
-  // 更新服务状态
-  updateServiceStatus: function(newStatus) {
-    var that = this;
-    var cachedServices = wx.getStorageSync('serviceInfo') || [];
-    var serviceId = this.data.serviceId;
-    
-    // 更新缓存中的服务状态
-    for (var i = 0; i < cachedServices.length; i++) {
-      if (cachedServices[i].id === serviceId || cachedServices[i].serviceId === serviceId) {
-        cachedServices[i].status = newStatus;
-        break;
-      }
-    }
-    
-    // 更新缓存
-    wx.setStorageSync('serviceInfo', cachedServices);
-    
-    // 更新页面显示
-    this.setData({
-      'serviceData.status': newStatus,
-      'serviceData.statusText': this.data.statusMap[newStatus] || '未知状态'
-    });
-    
-    // 更新按钮显示
-    this.updateButtonDisplay();
-    
-    // 可以在这里添加向服务器更新状态的请求
-    // 这里省略实现
   },
 
   // 取消服务

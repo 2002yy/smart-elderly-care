@@ -93,13 +93,13 @@
       评价服务
     </button>
     
-    <!-- 上传服务记录按钮 - 服务人员 & 待支付/待评价状态 -->
+    <!-- 未实现服务端文件上传：仅展示限制说明 -->
     <button 
       wx:if="{{showUploadBtn}}" 
       class="action-btn upload-btn" 
       bindtap="onUploadRecord"
       disabled="{{isLoading}}">
-      上传服务记录
+      记录上传未开通
     </button>
 
     <!-- 删除服务按钮 (原取消按钮) -->
