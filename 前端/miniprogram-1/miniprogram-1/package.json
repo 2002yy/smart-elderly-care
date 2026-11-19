@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "check": "node tools/build-miniprogram.mjs --check && node tools/check-service-time.mjs && node tools/check-service-edit.mjs && node tools/check-service-privacy.mjs",
+    "check": "node tools/build-miniprogram.mjs --check && node tools/check-service-time.mjs && node tools/check-service-edit.mjs && node tools/check-service-privacy.mjs && node tools/check-emergency-cache.mjs",
     "build": "node tools/build-miniprogram.mjs --build"
   },
   "engines": {

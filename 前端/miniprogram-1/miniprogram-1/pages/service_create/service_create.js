@@ -111,7 +111,9 @@ Page({
     var userInfo = wx.getStorageSync('userInfo') || {};
     // 确保userType存在，若不存在，说明用户信息异常，给予默认值或进行错误处理
     var userType = (userInfo && userInfo.userType !== null) ? userInfo.userType : 99;
-    var bindings = wx.getStorageSync('bindInfo') || [];
+    var bindingOwnerId = wx.getStorageSync('bindInfoOwnerId');
+    var bindings = wx.getStorageSync('token') && bindingOwnerId === String(userInfo.id)
+      ? (wx.getStorageSync('bindInfo') || []) : [];
     var targets = [];
     var targetNames = [];
     

@@ -1,5 +1,6 @@
 // pages/login.js
 const config = require('../../config.js');
+const emergencyCache = require('../../utils/emergencyCache.js');
 
 Page({
   data: {
@@ -97,10 +98,13 @@ Page({
       wx.removeStorageSync('serviceInfo');
       wx.setStorageSync('token', token);
       wx.setStorageSync('userInfo', userInfo);
-      
-      // 其他信息仍沿用既有存储契约。
-      wx.setStorageSync('emergencyInfo', Array.isArray(emergencyInfo) ? emergencyInfo : []);
+
+      // 旧版无账号归属的病史缓存不能安全迁移；新的离线副本只属于本次登录的账号。
+      wx.removeStorageSync('emergencyInfo');
+      const medicalRecord = Array.isArray(emergencyInfo) ? emergencyInfo[0] : emergencyInfo;
+      emergencyCache.saveEmergencyInfo(medicalRecord || {});
       wx.setStorageSync('bindInfo', Array.isArray(bindInfo) ? bindInfo : []);
+      wx.setStorageSync('bindInfoOwnerId', String(userInfo.id));
       
     } catch (e) {
       console.error('存储数据失败', e);

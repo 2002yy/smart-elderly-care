@@ -1,4 +1,5 @@
 const app = getApp();
+const emergencyCache = require('../../utils/emergencyCache.js');
 
 Page({
   /**
@@ -16,7 +17,6 @@ Page({
    * 生命周期函数--监听页面加载
    */
   onLoad(options) {
-    this.fetchBindInfo();
   },
 
   /**
@@ -32,9 +32,14 @@ Page({
   fetchBindInfo() {
     this.setData({ isLoading: true });
 
-    // 获取token
-    const token = wx.getStorageSync('token');
-    if (!token) {
+    const session = emergencyCache.currentSession();
+    const accountId = session ? session.userId : null;
+    if (this._visibleAccountId !== accountId) {
+      this.processBindInfo([]);
+      this._visibleAccountId = accountId;
+    }
+    if (!session) {
+      this.setData({ isLoading: false });
       wx.showToast({
         title: '请先登录',
         icon: 'none',
@@ -49,6 +54,9 @@ Page({
       
       return;
     }
+    const token = session.token;
+    const requestVersion = (this._bindRequestVersion || 0) + 1;
+    this._bindRequestVersion = requestVersion;
 
     // 请求后端API获取绑定信息
     wx.request({
@@ -58,10 +66,12 @@ Page({
         'Authorization': token
       },
       success: (res) => {
+        if (!emergencyCache.isCurrentSession(session) || requestVersion !== this._bindRequestVersion) return;
         if (res.statusCode === 200) {
           // 更新本地缓存
           const bindInfo = res.data.data || [];
           wx.setStorageSync('bindInfo', bindInfo);
+          wx.setStorageSync('bindInfoOwnerId', session.userId);
           // 处理数据并分类
           this.processBindInfo(bindInfo);
         } else {
@@ -69,11 +79,14 @@ Page({
         }
       },
       fail: (err) => {
+        if (!emergencyCache.isCurrentSession(session) || requestVersion !== this._bindRequestVersion) return;
         this.handleRequestError('网络请求失败，请检查网络连接');
         console.error('获取绑定信息失败:', err);
       },
       complete: () => {
-        this.setData({ isLoading: false });
+        if (emergencyCache.isCurrentSession(session) && requestVersion === this._bindRequestVersion) {
+          this.setData({ isLoading: false });
+        }
       }
     });
   },
@@ -158,7 +171,9 @@ Page({
    * 更新绑定状态
    */
   updateBindStatus(id, status, name) {
-    const token = wx.getStorageSync('token');
+    const session = emergencyCache.currentSession();
+    if (!session) return;
+    const token = session.token;
     const statusText = status === 1 ? '接受' : '拒绝/解除';
     
     wx.showLoading({
@@ -176,10 +191,12 @@ Page({
         'Content-Type': 'application/json'
       },
       success: (res) => {
+        if (!emergencyCache.isCurrentSession(session)) return;
         if (res.statusCode === 200) {
           if (status === 2) {
             // 主动解除绑定后，立即移除旧联系人缓存，不等待下一次拉取成功。
             wx.removeStorageSync('bindInfo');
+            wx.removeStorageSync('bindInfoOwnerId');
             this.setData({ bindInfo: [], pendingBinds: [], activeBinds: [] });
           }
           wx.showToast({
@@ -195,6 +212,7 @@ Page({
         }
       },
       fail: (err) => {
+        if (!emergencyCache.isCurrentSession(session)) return;
         this.handleRequestError('网络请求失败，请检查网络连接');
         console.error(`${statusText}绑定失败:`, err);
       },

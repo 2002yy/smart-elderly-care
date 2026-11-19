@@ -1,4 +1,6 @@
 // pages/emergency_info/emergency_info.js
+const emergencyCache = require('../../utils/emergencyCache.js');
+
 Page({
 
   /**
@@ -15,10 +17,7 @@ Page({
   /**
    * 生命周期函数--监听页面加载
    */
-  onLoad(options) {
-    this.loadAllInfo();
-    this.fetchEmergencyInfo();
-  },
+  onLoad(options) {},
 
   /**
    * 生命周期函数--监听页面初次渲染完成
@@ -54,6 +53,7 @@ Page({
    * 页面相关事件处理函数--监听用户下拉动作
    */
   onPullDownRefresh() {
+    this.loadAllInfo();
     this.fetchEmergencyInfo();
     wx.stopPullDownRefresh();
   },
@@ -76,17 +76,20 @@ Page({
    * 从缓存加载所有信息
    */
   loadAllInfo() {
+    const session = emergencyCache.currentSession();
     // 加载用户信息
-    const userInfo = wx.getStorageSync('userInfo') || {};
+    const userInfo = session ? (wx.getStorageSync('userInfo') || {}) : {};
     
-    // 加载绑定信息
-    const bindInfo = wx.getStorageSync('bindInfo') || [];
+    // 联系人缓存也必须属于当前账号，不能被切换前的列表请求污染。
+    const bindOwnerId = wx.getStorageSync('bindInfoOwnerId');
+    const bindInfo = session && bindOwnerId === session.userId
+      ? (wx.getStorageSync('bindInfo') || []) : [];
     
     // 找到已激活的绑定对象作为紧急联系人
     const activeBind = bindInfo.find(bind => bind.bind_status === 1);
     
     // 加载紧急医疗信息
-    const emergencyInfo = wx.getStorageSync('emergencyInfo') || {};
+    const emergencyInfo = emergencyCache.readEmergencyInfo();
 
     // 更新数据
     this.setData({
@@ -119,8 +122,8 @@ Page({
     this.setData({ loading: true });
     
     // 获取token
-    const token = wx.getStorageSync('token');
-    if (!token) {
+    const session = emergencyCache.currentSession();
+    if (!session) {
       wx.showToast({
         title: '请先登录',
         icon: 'none'
@@ -128,6 +131,7 @@ Page({
       this.setData({ loading: false });
       return;
     }
+    const token = session.token;
     
     // 获取全局配置中的baseUrl
     const app = getApp();
@@ -140,25 +144,31 @@ Page({
         'Authorization': `Bearer ${token}`
       },
       success: (res) => {
-        if (res.statusCode === 200 && res.data.emergencyInfo) {
+        if (!emergencyCache.isCurrentSession(session)) return;
+        if (res.statusCode === 200 && res.data && res.data.emergencyInfo) {
           // 从后端获取数据成功
           const emergencyInfo = res.data.emergencyInfo;
           
           // 保存到本地缓存
-          wx.setStorageSync('emergencyInfo', emergencyInfo);
+          emergencyCache.saveEmergencyInfo(emergencyInfo, session);
           
           this.setData({
             emergencyInfo
           });
         } else {
+          // 明确的鉴权失败不允许继续展示之前缓存的医疗记录。
+          if (res.statusCode === 401 || res.statusCode === 403) {
+            this.setData({ emergencyInfo: {} });
+          }
           console.error('获取紧急医疗信息失败:', res);
         }
       },
       fail: (err) => {
+        if (!emergencyCache.isCurrentSession(session)) return;
         console.error('请求紧急医疗信息失败:', err);
       },
       complete: () => {
-        this.setData({ loading: false });
+        if (emergencyCache.isCurrentSession(session)) this.setData({ loading: false });
       }
     });
   },
