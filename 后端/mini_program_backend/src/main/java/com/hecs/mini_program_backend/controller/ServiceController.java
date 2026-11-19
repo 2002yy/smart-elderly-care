@@ -304,15 +304,16 @@ public class ServiceController {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                         .body(Map.of("message", "不能通过资料编辑接口直接修改服务状态"));
             }
+            // 服务对象决定谁能查看订单；不能通过资料编辑更换授权主体。
+            if (body.containsKey("targetId")) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("message", "不能通过资料编辑接口更换服务对象"));
+            }
             
             // 更新服务
             if (body.containsKey("type")) {
                 service.setServiceType(Integer.parseInt(body.get("type").toString()));
                 logger.debug("Updated service type to: {}", service.getServiceType());
-            }
-            if (body.containsKey("targetId")) {
-                service.setTargetId(Integer.parseInt(body.get("targetId").toString()));
-                logger.debug("Updated target ID to: {}", service.getTargetId());
             }
             if (body.containsKey("scheduledTime")) {
                 service.setScheduledTime(Instant.parse(body.get("scheduledTime").toString()));
@@ -421,6 +422,11 @@ public class ServiceController {
             if (service.getServiceStatus() != 4) { // 待评价状态
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("服务状态不正确，无法评价");
             }
+            // 接受旧客户端显式传入的 5，但评价结束状态由服务端确定。
+            if ((body.containsKey("status") && !"5".equals(String.valueOf(body.get("status"))))
+                    || body.containsKey("serviceStatus")) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("评价不能指定其他服务状态");
+            }
             
             // 更新服务评价
             // 使用正确的评价字段：serviceEvaluationStars和serviceEvaluationNotes
@@ -447,14 +453,7 @@ public class ServiceController {
                     logger.info("Updated evaluation notes to: {} (from comment)", service.getServiceEvaluationNotes());
                 }
                 
-                // 更新服务状态 - 检查是否有状态字段，否则默认为5（已完成）
-                if (body.containsKey("status")) {
-                    service.setServiceStatus(Integer.parseInt(body.get("status").toString()));
-                    logger.info("Updated service status to: {} (from request)", service.getServiceStatus());
-                } else {
-                    service.setServiceStatus(5); // 已完成状态
-                    logger.info("Updated service status to: 5 (default completed status)");
-                }
+                service.setServiceStatus(5); // 已完成状态，由服务端决定
                 
                 // 保存服务
                 updatedService = serviceService.updateService(service);
