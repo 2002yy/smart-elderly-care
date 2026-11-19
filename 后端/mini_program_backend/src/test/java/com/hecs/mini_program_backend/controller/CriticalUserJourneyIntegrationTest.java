@@ -47,7 +47,6 @@ class CriticalUserJourneyIntegrationTest {
         User target = saveUser("ci-target", 0, "测试老人");
         target.setPhoneNumber("13900000001");
         userRepository.saveAndFlush(target);
-        User provider = saveUser("ci-provider", 2, "测试服务员");
         String authorization = "Bearer " + new TokenGenerate().TokenGenerate(creator.getOpenId(), creator.getUserType());
 
         // 真正的预约必须先由老人确认监护人绑定；申请本身不应自动生效。
@@ -78,18 +77,17 @@ class CriticalUserJourneyIntegrationTest {
                         .content("""
                                 {
                                   "targetId": %d,
-                                  "providerId": %d,
                                   "type": 1,
                                   "scheduledTime": "2030-01-02T03:04:05Z",
                                   "address": "CI养老服务中心",
                                   "remark": "前端到数据库关键路径"
                                 }
-                                """.formatted(target.getId(), provider.getId())))
+                                """.formatted(target.getId())))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.service.creatorId").value(creator.getId()))
                 .andExpect(jsonPath("$.service.targetId").value(target.getId()))
-                .andExpect(jsonPath("$.service.providerId").value(provider.getId()))
+                .andExpect(jsonPath("$.service.providerId").value(0))
                 .andExpect(jsonPath("$.service.status").value(0));
 
         List<Service> persisted = serviceRepository.findAll();
@@ -97,7 +95,7 @@ class CriticalUserJourneyIntegrationTest {
         Service service = persisted.get(0);
         assertThat(service.getCreatorId()).isEqualTo(creator.getId());
         assertThat(service.getTargetId()).isEqualTo(target.getId());
-        assertThat(service.getProviderId()).isEqualTo(provider.getId());
+        assertThat(service.getProviderId()).isZero();
         assertThat(service.getAppointedAddress()).isEqualTo("CI养老服务中心");
         assertThat(service.getServiceDes()).isEqualTo("前端到数据库关键路径");
 

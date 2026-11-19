@@ -677,7 +677,6 @@ Page({
     // 只在创建服务时设置targetId，编辑服务时不修改targetId
     if (!this.data.isEdit) {
       dataToSend.targetId = String(targetId || ''); // 转换为字符串，确保非空
-      dataToSend.providerId = "5"; // 创建服务时默认设置服务人员ID为5
     }
 
     console.log('发送的数据:', dataToSend);
@@ -688,7 +687,6 @@ Page({
     console.log('- remark:', typeof dataToSend.remark, dataToSend.remark);
     if (!this.data.isEdit) {
       console.log('- targetId:', typeof dataToSend.targetId, dataToSend.targetId);
-      console.log('- providerId:', typeof dataToSend.providerId, dataToSend.providerId);
     }
 
     wx.request({
