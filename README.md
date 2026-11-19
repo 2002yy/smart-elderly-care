@@ -10,7 +10,7 @@
 
 - 微信静默登录与 JWT 鉴权；
 - 老人—监护人绑定；
-- 服务创建、接单、进行、支付、评价；
+- 服务创建、接单、进行、评价；支付仍是未接入真实渠道的待实现能力；
 - 紧急医疗信息展示和直接拨号（尚未接入自动求助通知）；
 - 原生微信小程序页面与 Spring Boot REST API。
 
@@ -128,8 +128,8 @@ MINIPROGRAM_API_BASE_URL=https://api.example.com npm run build
 
 关键权限合同包括：
 
-- 非服务参与者不能取消或评价；
-- 支付只能从状态 3 进入状态 4；
+- 非服务参与者不能读取详情、修改、取消或评价；
+- **未接入真实支付**：状态 3 目前不能进入状态 4；旧支付接口返回 501，通用资料更新也不能代替支付确认；
 - 评价只能从状态 4 进入状态 5；
 - 无效或过期 JWT 返回 401；
 - 创建服务必须提供对象、类型、时间和地址。
@@ -145,7 +145,7 @@ MINIPROGRAM_API_BASE_URL=https://api.example.com npm run build
 | 创建服务 | POST | `/api/services/create` |
 | 更新服务 | POST | `/api/services/update/{id}` |
 | 取消服务 | POST | `/api/services/cancel/{id}` |
-| 支付 | POST | `/api/services/payment/{id}` |
+| 支付（未实现，返回 501） | POST | `/api/services/payment/{id}` |
 | 评价 | POST | `/api/services/evaluate/{id}` |
 | 绑定 | GET/POST/PUT | `/api/bindings/**` |
 | 紧急信息 | GET/POST | `/api/emergency/**` |
@@ -154,6 +154,10 @@ MINIPROGRAM_API_BASE_URL=https://api.example.com npm run build
 现在明确返回 HTTP 501 和 `delivered: false`，不能作为已通知监护人或急救机构的证据。
 小程序急救卡提供中国大陆 120 和已绑定监护人的直接拨号入口；拨号不等于接通。
 未填写的病史、过敏史和药物信息显示为“未填写”，不能默认解释为“无”。
+
+**支付功能限制**：当前没有微信支付订单、交易回调或服务端验签；小程序仅提示“支付未开通”，
+不会发起模拟支付或把订单状态从“待支付”改为“待评价”。因此状态 4、5 的历史数据仍可查看，
+但新订单无法通过支付流程进入该阶段。恢复流程前必须接入真实交易确认及相应授权校验。
 
 详细字段见前后端目录中的 `API_Documentation.md`。
 
@@ -170,7 +174,7 @@ mvn --batch-mode --no-transfer-progress clean verify
 
 - Spring 上下文与 H2 数据库；
 - JWT 无效请求；
-- 服务取消、支付和评价权限；
+- 服务取消和评价权限、支付接口拒绝假成功；
 - 服务状态合法流转；
 - 真实 Controller → Service → Repository → H2 的创建与查询闭环；
 - `/login` 缺少 code 时不调用微信外部接口。

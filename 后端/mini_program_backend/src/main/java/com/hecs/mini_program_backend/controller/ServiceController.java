@@ -299,9 +299,11 @@ public class ServiceController {
             if (!isServiceEditor(service, user)) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("message", "无权修改此服务"));
             }
-            
-            // 记录更新前的状态
-            Integer oldStatus = service.getServiceStatus();
+            // 通用资料编辑接口不能确认支付、评价或完成状态；这些是独立的业务事实。
+            if (body.containsKey("status") || body.containsKey("serviceStatus")) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("message", "不能通过资料编辑接口直接修改服务状态"));
+            }
             
             // 更新服务
             if (body.containsKey("type")) {
@@ -323,17 +325,6 @@ public class ServiceController {
             if (body.containsKey("remark")) {
                 service.setServiceDes(body.get("remark").toString());
                 logger.debug("Updated description to: {}", service.getServiceDes());
-            }
-            
-            // 特别处理状态更新
-            if (body.containsKey("status") || body.containsKey("serviceStatus")) {
-                Integer newStatus = body.containsKey("status") 
-                    ? Integer.parseInt(body.get("status").toString()) 
-                    : Integer.parseInt(body.get("serviceStatus").toString());
-                
-                service.setServiceStatus(newStatus);
-                logger.info("Service status updated from {} to {} for service ID: {}", 
-                           oldStatus, newStatus, service.getServiceId());
             }
             
             // 保存服务
@@ -488,7 +479,7 @@ public class ServiceController {
     }
 
     /**
-     * 支付服务接口 - 将服务状态从"待支付(3)"更新为"待评价(4)"
+     * 历史支付入口：未对接支付平台前不能将状态标记为已付款。
      */
     @PostMapping("/payment/{id}")
     public ResponseEntity<?> paymentService(
@@ -513,30 +504,12 @@ public class ServiceController {
                 logger.warn("Service not found with ID: {}", id);
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "服务不存在"));
             }
-            
-            // 检查状态
-            if (service.getServiceStatus() != 3) { // 必须是待支付状态
-                logger.warn("Invalid service status for payment. Current status: {}, service ID: {}", 
-                           service.getServiceStatus(), id);
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                        .body(Map.of("message", "服务状态不正确，无法支付", "currentStatus", service.getServiceStatus()));
+            if (!isServiceParticipant(service, user)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("message", "无权访问此服务"));
             }
-            
-            // 更新服务状态为待评价(4)
-            service.setServiceStatus(4);
-            logger.info("Updating service status from 3 (payment) to 4 (evaluation) for service ID: {}", id);
-            
-            // 保存服务
-            Service updatedService = serviceService.updateService(service);
-            logger.info("Service status updated successfully for ID: {}", id);
-            
-            // 返回结果
-            Map<String, Object> responseMap = new HashMap<>();
-            responseMap.put("success", true);
-            responseMap.put("message", "支付成功，服务状态已更新");
-            responseMap.put("service", createServiceResponseMap(updatedService));
-            
-            return ResponseEntity.ok(responseMap);
+            // 没有真实支付订单或回调验证渠道，返回可识别的失败供旧客户端处理。
+            return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED)
+                    .body(Map.of("success", false, "paid", false, "message", "尚未接入真实支付，不能确认付款"));
         } catch (JwtException e) {
             logger.error("Invalid token in payment request", e);
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "无效的token"));

@@ -75,13 +75,13 @@
       修改服务
     </button>
     
-    <!-- 支付按钮 - 老人/监护人 & 待支付状态 -->
+    <!-- 未接入支付渠道：保留限制说明入口，不执行模拟支付 -->
     <button 
       wx:if="{{showPayBtn}}" 
       class="action-btn pay-btn" 
       bindtap="onPayment"
       disabled="{{isLoading}}">
-      立即支付
+      支付未开通
     </button>
     
     <!-- 评价按钮 - 老人/监护人 & 待评价状态 -->
