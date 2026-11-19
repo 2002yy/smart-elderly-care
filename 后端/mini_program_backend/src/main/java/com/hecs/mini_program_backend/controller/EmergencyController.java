@@ -20,8 +20,6 @@ import java.util.UUID;
 @RequestMapping("/api/emergency")
 public class EmergencyController {
 
-    private final TokenParse tokenParse = new TokenParse();
-
     @Autowired
     private EmergencyService emergencyService;
 
@@ -32,8 +30,7 @@ public class EmergencyController {
     public ResponseEntity<?> getEmergencyInfo(@RequestHeader("Authorization") String token) {
         try {
             // 解析token
-            tokenParse.parseToken(token.replace("Bearer ", ""));
-            String openId = tokenParse.getOpenid();
+            String openId = TokenParse.parseToken(token.replace("Bearer ", "")).openId();
             
             // 获取用户信息
             User user = userService.getUserByOpenId(openId);
@@ -73,8 +70,7 @@ public class EmergencyController {
             @RequestBody Map<String, Object> body) {
         try {
             // 解析token
-            tokenParse.parseToken(token.replace("Bearer ", ""));
-            String openId = tokenParse.getOpenid();
+            String openId = TokenParse.parseToken(token.replace("Bearer ", "")).openId();
             
             // 获取用户信息
             User user = userService.getUserByOpenId(openId);
@@ -138,8 +134,7 @@ public class EmergencyController {
             @RequestBody Map<String, Object> body) {
         try {
             // 解析token
-            tokenParse.parseToken(token.replace("Bearer ", ""));
-            String openId = tokenParse.getOpenid();
+            String openId = TokenParse.parseToken(token.replace("Bearer ", "")).openId();
             
             // 获取用户信息
             User user = userService.getUserByOpenId(openId);
