@@ -32,14 +32,18 @@ public class ServiceController {
     @Autowired
     private UserService userService;
 
-    private boolean isServiceParticipant(Service service, User user) {
+    private boolean isServiceEditor(Service service, User user) {
         if (user == null || user.getId() == null) {
             return false;
         }
         Integer userId = user.getId();
         return userId.equals(service.getCreatorId())
-                || userId.equals(service.getTargetId())
-                || userId.equals(service.getProviderId());
+                || userId.equals(service.getTargetId());
+    }
+
+    private boolean isServiceParticipant(Service service, User user) {
+        return isServiceEditor(service, user)
+                || (user != null && user.getId() != null && user.getId().equals(service.getProviderId()));
     }
 
     private Map<String, Object> createServiceResponseMap(Service service) {
@@ -292,7 +296,7 @@ public class ServiceController {
                 logger.warn("Service not found with ID: {}", id);
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", "服务不存在"));
             }
-            if (!isServiceParticipant(service, user)) {
+            if (!isServiceEditor(service, user)) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("message", "无权修改此服务"));
             }
             

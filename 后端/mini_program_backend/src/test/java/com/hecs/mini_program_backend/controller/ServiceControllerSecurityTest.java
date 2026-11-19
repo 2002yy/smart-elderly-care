@@ -84,6 +84,22 @@ class ServiceControllerSecurityTest {
     }
 
     @Test
+    void assignedProviderCannotEditClientDetails() throws Exception {
+        User requester = user(3, "provider");
+        Service service = service(10, 1, 2, 3, 0);
+        when(userService.getUserByOpenId("provider")).thenReturn(requester);
+        when(serviceService.getServiceById(10)).thenReturn(service);
+
+        mockMvc.perform(post("/api/services/update/10")
+                        .header("Authorization", bearer("provider", 2))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"address\":\"私自改地址\"}"))
+                .andExpect(status().isForbidden());
+
+        verify(serviceService, never()).updateService(any(Service.class));
+    }
+
+    @Test
     void unrelatedUserCannotUpdateServiceOrForgeStatus() throws Exception {
         User requester = user(99, "stranger");
         Service service = service(10, 1, 2, 3, 0);
