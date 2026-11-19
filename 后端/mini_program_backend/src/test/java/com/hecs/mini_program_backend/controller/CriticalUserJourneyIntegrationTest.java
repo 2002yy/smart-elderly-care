@@ -5,6 +5,7 @@ import com.hecs.mini_program_backend.entity.User;
 import com.hecs.mini_program_backend.entity.Bind;
 import com.hecs.mini_program_backend.mapper.BindRepository;
 import com.hecs.mini_program_backend.mapper.ServiceRepository;
+import com.hecs.mini_program_backend.mapper.ServiceApplicationRepository;
 import com.hecs.mini_program_backend.mapper.UserRepository;
 import com.hecs.mini_program_backend.utils.TokenGenerate;
 import org.junit.jupiter.api.Test;
@@ -37,6 +38,9 @@ class CriticalUserJourneyIntegrationTest {
 
     @Autowired
     private ServiceRepository serviceRepository;
+
+    @Autowired
+    private ServiceApplicationRepository applicationRepository;
 
     @Autowired
     private BindRepository bindRepository;
@@ -175,6 +179,96 @@ class CriticalUserJourneyIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.total").value(1))
                 .andExpect(jsonPath("$.data[0].status").value(5));
+    }
+
+    @Test
+    void declaredWorkerMustApplyAndGetCustomerApprovalBeforeReadingPrivateDetails() throws Exception {
+        User elder = saveUser("ci-applicant-elder", 0, "接单测试老人");
+        User chosenWorker = saveUser("ci-chosen-worker", 2, "甲员工（自报）");
+        User otherWorker = saveUser("ci-other-worker", 3, "乙员工（自报）");
+        String elderToken = "Bearer " + new TokenGenerate().TokenGenerate(elder.getOpenId(), elder.getUserType());
+        String chosenToken = "Bearer " + new TokenGenerate().TokenGenerate(
+                chosenWorker.getOpenId(), chosenWorker.getUserType());
+        String otherToken = "Bearer " + new TokenGenerate().TokenGenerate(
+                otherWorker.getOpenId(), otherWorker.getUserType());
+
+        Service service = new Service();
+        service.setCreatorId(elder.getId());
+        service.setTargetId(elder.getId());
+        service.setProviderId(0);
+        service.setServiceType(1);
+        service.setServiceStatus(0);
+        service.setAppointedAddress("绝不能提前泄露的住址");
+        service = serviceRepository.saveAndFlush(service);
+        int id = service.getServiceId();
+
+        mockMvc.perform(get("/api/services/available").header("Authorization", chosenToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.total").value(1))
+                .andExpect(jsonPath("$.data[0].serviceId").value(id))
+                .andExpect(jsonPath("$.data[0].address").doesNotExist())
+                .andExpect(jsonPath("$.data[0].targetId").doesNotExist())
+                .andExpect(jsonPath("$.data[0].creatorId").doesNotExist());
+
+        mockMvc.perform(get("/api/services/" + id).header("Authorization", chosenToken))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/services/available").header("Authorization", elderToken))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(post("/api/services/" + id + "/apply").header("Authorization", elderToken))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(post("/api/services/" + id + "/apply").header("Authorization", chosenToken))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.status").value(0));
+        mockMvc.perform(post("/api/services/" + id + "/apply").header("Authorization", chosenToken))
+                .andExpect(status().isCreated()); // 幂等：再次申请不能增加记录
+        mockMvc.perform(post("/api/services/" + id + "/apply").header("Authorization", otherToken))
+                .andExpect(status().isCreated());
+
+        int chosenApplicationId = applicationRepository
+                .findByServiceIdAndApplicantId(id, chosenWorker.getId()).getApplicationId();
+        assertThat(applicationRepository.findByServiceIdOrderByApplicationIdAsc(id)).hasSize(2);
+
+        mockMvc.perform(get("/api/services/" + id + "/applications")
+                        .header("Authorization", otherToken))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/services/" + id + "/applications")
+                        .header("Authorization", elderToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.length()").value(2));
+        mockMvc.perform(post("/api/services/" + id + "/applications/" + chosenApplicationId + "/approve")
+                        .header("Authorization", otherToken))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(post("/api/services/" + id + "/applications/" + chosenApplicationId + "/approve")
+                        .header("Authorization", elderToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.providerId").value(chosenWorker.getId()))
+                .andExpect(jsonPath("$.status").value(1));
+
+        mockMvc.perform(get("/api/services/" + id).header("Authorization", chosenToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.address").value("绝不能提前泄露的住址"));
+        mockMvc.perform(get("/api/services/" + id).header("Authorization", otherToken))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/services").header("Authorization", chosenToken).param("status", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.total").value(1));
+        mockMvc.perform(get("/api/services").header("Authorization", otherToken).param("status", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.total").value(0));
+        mockMvc.perform(post("/api/services/" + id + "/apply").header("Authorization", otherToken))
+                .andExpect(status().isConflict());
+        mockMvc.perform(post("/api/services/" + id + "/applications/" + chosenApplicationId + "/approve")
+                        .header("Authorization", elderToken))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
+    void invalidTokenCannotReadPublicServicePool() throws Exception {
+        mockMvc.perform(get("/api/services/available")
+                        .header("Authorization", "Bearer invalid-token"))
+                .andExpect(status().isUnauthorized());
     }
 
     @Test

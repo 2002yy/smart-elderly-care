@@ -3,6 +3,7 @@ package com.hecs.mini_program_backend.controller;
 import com.hecs.mini_program_backend.entity.Service;
 import com.hecs.mini_program_backend.entity.User;
 import com.hecs.mini_program_backend.service.BindService;
+import com.hecs.mini_program_backend.service.ServiceApplicationService;
 import com.hecs.mini_program_backend.service.ServiceService;
 import com.hecs.mini_program_backend.service.UserService;
 import com.hecs.mini_program_backend.utils.TokenParse;
@@ -39,6 +40,9 @@ public class ServiceController {
     @Autowired
     private BindService bindService;
 
+    @Autowired
+    private ServiceApplicationService applicationService;
+
     private boolean canCreateServiceFor(User user, Integer targetId) {
         if (user.getId() == null || user.getUserType() == null || targetId == null) {
             return false;
@@ -64,9 +68,10 @@ public class ServiceController {
 
     private boolean isServiceParticipant(Service service, User user) {
         return isServiceEditor(service, user)
-                || (user != null && user.getId() != null && Integer.valueOf(2).equals(user.getUserType())
+                || (applicationService.isDeclaredWorker(user)
                 && service.getProviderId() != null && service.getProviderId() > 0
-                && user.getId().equals(service.getProviderId()));
+                && user.getId().equals(service.getProviderId())
+                && applicationService.hasApprovedAssignment(service.getServiceId(), user.getId()));
     }
 
     private Map<String, Object> createServiceResponseMap(Service service) {
@@ -140,10 +145,16 @@ public class ServiceController {
             }
             
             Pageable pageable = PageRequest.of(page - 1, pageSize, Sort.by(Sort.Direction.DESC, "serviceId"));
-            Page<Service> servicePage = status == null
-                    ? serviceService.getServicesForUser(user.getId(), pageable)
-                    : serviceService.getServicesForUserByStatuses(user.getId(),
-                            status == 1 ? List.of(0, 1) : List.of(status), pageable);
+            Page<Service> servicePage;
+            if (applicationService.isDeclaredWorker(user)) {
+                servicePage = applicationService.assignedToWorker(user.getId(),
+                        status == null ? List.of(1, 2, 3, 4, 5) : List.of(status), pageable);
+            } else {
+                servicePage = status == null
+                        ? serviceService.getServicesForUser(user.getId(), pageable)
+                        : serviceService.getServicesForUserByStatuses(user.getId(),
+                                status == 1 ? List.of(0, 1) : List.of(status), pageable);
+            }
             
             List<Map<String, Object>> serviceList = servicePage.getContent().stream()
                 .map(this::createServiceResponseMap)

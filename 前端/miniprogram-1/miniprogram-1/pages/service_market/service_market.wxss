@@ -1,0 +1,7 @@
+.market-page { min-height: 100vh; padding: 24rpx; background: #f6f8fa; box-sizing: border-box; }
+.notice { padding: 24rpx; font-size: 25rpx; color: #695522; background: #fff7de; border-radius: 14rpx; line-height: 1.6; }
+.market-card { margin-top: 20rpx; padding: 28rpx; background: #fff; border-radius: 16rpx; }
+.service-name { font-size: 32rpx; font-weight: 600; }
+.service-time { margin-top: 12rpx; color: #666; font-size: 26rpx; }
+.apply-btn { margin-top: 20rpx; background: #147d61; color: white; font-size: 27rpx; }
+.hint { padding: 48rpx 0; text-align: center; color: #666; }

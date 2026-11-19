@@ -3,6 +3,7 @@ package com.hecs.mini_program_backend.controller;
 import com.hecs.mini_program_backend.entity.Service;
 import com.hecs.mini_program_backend.entity.User;
 import com.hecs.mini_program_backend.service.ServiceService;
+import com.hecs.mini_program_backend.service.ServiceApplicationService;
 import com.hecs.mini_program_backend.service.UserService;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
@@ -33,17 +34,26 @@ class ServiceControllerSecurityTest {
     private static final String SIGNATURE = "com.hecs.mini_program_backend.utils";
 
     private ServiceService serviceService;
+    private ServiceApplicationService applicationService;
     private UserService userService;
     private MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
         serviceService = mock(ServiceService.class);
+        applicationService = mock(ServiceApplicationService.class);
         userService = mock(UserService.class);
 
         ServiceController controller = new ServiceController();
         ReflectionTestUtils.setField(controller, "serviceService", serviceService);
+        ReflectionTestUtils.setField(controller, "applicationService", applicationService);
         ReflectionTestUtils.setField(controller, "userService", userService);
+
+        when(applicationService.isDeclaredWorker(any(User.class))).thenAnswer(invocation -> {
+            User candidate = invocation.getArgument(0);
+            return candidate.getUserType() != null && candidate.getUserType() >= 2
+                    && candidate.getUserType() <= 4;
+        });
 
         mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
     }
@@ -77,11 +87,28 @@ class ServiceControllerSecurityTest {
         Service service = service(10, 1, 2, 3, 0);
         when(userService.getUserByOpenId("provider")).thenReturn(requester);
         when(serviceService.getServiceById(10)).thenReturn(service);
+        when(applicationService.hasApprovedAssignment(10, 3)).thenReturn(true);
 
         mockMvc.perform(get("/api/services/10")
                         .header("Authorization", bearer("provider", 2)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.serviceId").value(10));
+    }
+
+    @Test
+    void legacyProviderIdWithoutConsentNeverGrantsPrivateDetailAccess() throws Exception {
+        User requester = user(3, "legacy-provider");
+        requester.setUserType(2);
+        Service service = service(10, 1, 2, 3, 1);
+        service.setAppointedAddress("未获授权的住址");
+        when(userService.getUserByOpenId("legacy-provider")).thenReturn(requester);
+        when(serviceService.getServiceById(10)).thenReturn(service);
+
+        mockMvc.perform(get("/api/services/10")
+                        .header("Authorization", bearer("legacy-provider", 2)))
+                .andExpect(status().isForbidden());
+
+        verify(userService, never()).getUserById(2);
     }
 
     @Test

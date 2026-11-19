@@ -133,4 +133,8 @@
 /* 去除按钮默认边框 */
 .action-btn::after {
   border: none;
-} 
+}
+.application-panel { background: #fff; margin: 20rpx; padding: 24rpx; border-radius: 16rpx; }
+.application-warning { font-size: 24rpx; color: #795e2b; line-height: 1.6; margin-bottom: 16rpx; }
+.application-empty { color: #888; padding: 20rpx 0; }
+.application-row { display: flex; align-items: center; justify-content: space-between; padding: 16rpx 0; border-bottom: 1rpx solid #eee; }
