@@ -217,35 +217,53 @@ class ServiceControllerSecurityTest {
     }
 
     @Test
-    void paymentRequiresWaitingForPaymentStatus() throws Exception {
-        User requester = user(1, "creator");
-        Service service = service(10, 1, 2, 3, 2);
-        when(userService.getUserByOpenId("creator")).thenReturn(requester);
+    void unrelatedUserCannotInvokeLegacyPayment() throws Exception {
+        User requester = user(99, "stranger");
+        Service service = service(10, 1, 2, 3, 3);
+        when(userService.getUserByOpenId("stranger")).thenReturn(requester);
         when(serviceService.getServiceById(10)).thenReturn(service);
 
         mockMvc.perform(post("/api/services/payment/10")
-                        .header("Authorization", bearer("creator", 0)))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.currentStatus").value(2));
+                        .header("Authorization", bearer("stranger", 0)))
+                .andExpect(status().isForbidden());
 
         verify(serviceService, never()).updateService(any(Service.class));
     }
 
     @Test
-    void validPaymentMovesStatusFromThreeToFour() throws Exception {
+    void paymentWithoutGatewayNeverClaimsSuccess() throws Exception {
         User requester = user(1, "creator");
         Service service = service(10, 1, 2, 3, 3);
         when(userService.getUserByOpenId("creator")).thenReturn(requester);
         when(serviceService.getServiceById(10)).thenReturn(service);
-        when(serviceService.updateService(any(Service.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         mockMvc.perform(post("/api/services/payment/10")
                         .header("Authorization", bearer("creator", 0)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true));
+                .andExpect(status().isNotImplemented())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.paid").value(false));
 
-        verify(serviceService).updateService(service);
-        org.junit.jupiter.api.Assertions.assertEquals(4, service.getServiceStatus());
+        verify(serviceService, never()).updateService(any(Service.class));
+        org.junit.jupiter.api.Assertions.assertEquals(3, service.getServiceStatus());
+    }
+
+    @Test
+    void authorizedEditorCannotForgePaymentOrCompletionThroughAliases() throws Exception {
+        User requester = user(1, "creator");
+        Service service = service(10, 1, 2, 3, 3);
+        when(userService.getUserByOpenId("creator")).thenReturn(requester);
+        when(serviceService.getServiceById(10)).thenReturn(service);
+
+        for (String payload : new String[]{"{\"serviceStatus\":4}", "{\"status\":5}"}) {
+            mockMvc.perform(post("/api/services/update/10")
+                            .header("Authorization", bearer("creator", 0))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(payload))
+                    .andExpect(status().isBadRequest());
+        }
+
+        verify(serviceService, never()).updateService(any(Service.class));
+        org.junit.jupiter.api.Assertions.assertEquals(3, service.getServiceStatus());
     }
 
     private static User user(Integer id, String openId) {

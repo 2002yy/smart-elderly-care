@@ -384,126 +384,12 @@ Page({
     });
   },
   
-  // 支付
+  // 当前无真实支付渠道，不能模拟付款或推进订单状态。
   onPayment: function() {
-    var that = this;
-    var serviceId = this.data.serviceId;
-    
-    console.log('开始支付流程，服务ID:', serviceId);
-    
-    this.setData({
-      isLoading: true
-    });
-    
-    // 模拟支付过程
-    wx.showLoading({
-      title: '处理支付...'
-    });
-    
-    // 延迟2秒模拟支付过程
-    setTimeout(function() {
-      console.log('支付完成，准备更新服务状态为待评价(4)');
-      // 更新服务状态为待评价(4)
-      that.updateServiceStatusToServer(serviceId, 4);
-    }, 2000);
-  },
-  
-  // 向服务器更新服务状态
-  updateServiceStatusToServer: function(serviceId, newStatus) {
-    var token = wx.getStorageSync('token');
-    var that = this;
-    
-    console.log('向服务器更新服务状态，ID:', serviceId, '新状态:', newStatus);
-    
-    // 获取当前服务数据，确保所有必须字段都包含
-    var service = this.data.serviceData;
-    
-    // 构建与后端对应的请求数据
-    var requestData = {
-      serviceStatus: newStatus
-    };
-    
-    // 获取与后端字段名匹配的数据
-    if (service.type !== undefined) {
-      requestData.serviceType = service.type;
-    }
-    
-    if (service.address) {
-      requestData.appointedAddress = service.address;
-    }
-    
-    if (service.remark) {
-      requestData.serviceDes = service.remark;
-    }
-    
-    if (service.targetId) {
-      requestData.targetId = service.targetId;
-    }
-    
-    console.log('发送到服务器的数据:', requestData);
-    
-    wx.request({
-      url: `${app.globalData.baseUrl}/api/services/update/${serviceId}`,
-      method: 'POST',
-      header: {
-        'Authorization': token,
-        'Content-Type': 'application/json'
-      },
-      data: requestData,
-      success: function(res) {
-        wx.hideLoading();
-        console.log('服务状态更新响应:', res);
-        
-        if (res.statusCode === 200 && res.data) {
-          console.log('服务状态更新成功:', res.data);
-          
-          // 服务器返回的更新后的服务数据
-          var updatedService = res.data.service || res.data;
-          console.log('更新后的服务数据:', updatedService);
-          
-          // 完全清除缓存，让服务列表页面重新获取
-          wx.removeStorageSync('serviceInfo');
-          
-          // 更新当前页面显示
-          that.setData({
-            'serviceData.status': newStatus,
-            'serviceData.statusText': that.data.statusMap[newStatus] || '未知状态',
-            isLoading: false
-          });
-          
-          // 更新按钮显示
-          that.updateButtonDisplay();
-          
-          wx.showToast({
-            title: '支付成功',
-            icon: 'success'
-          });
-          
-          // 延迟返回到服务列表页面
-          setTimeout(function() {
-            console.log('准备跳转到服务列表页面');
-            wx.switchTab({
-              url: '/pages/service_list/service_list'
-            });
-          }, 1500);
-        } else {
-          that.setData({ isLoading: false });
-          console.error('服务状态更新失败:', res);
-          wx.showToast({
-            title: res.data && res.data.message ? res.data.message : '更新服务状态失败',
-            icon: 'none'
-          });
-        }
-      },
-      fail: function(err) {
-        that.setData({ isLoading: false });
-        wx.hideLoading();
-        console.error('更新服务状态失败:', err);
-        wx.showToast({
-          title: '网络请求失败',
-          icon: 'none'
-        });
-      }
+    wx.showModal({
+      title: '支付未开通',
+      content: '本演示系统尚未接入微信支付，当前无法付款，订单状态不会改变。',
+      showCancel: false
     });
   },
   
@@ -715,4 +601,4 @@ Page({
       }
     });
   }
-}); 
+});
