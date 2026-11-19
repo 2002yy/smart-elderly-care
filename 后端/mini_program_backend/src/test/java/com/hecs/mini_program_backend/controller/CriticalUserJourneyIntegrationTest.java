@@ -111,6 +111,14 @@ class CriticalUserJourneyIntegrationTest {
                 .andExpect(jsonPath("$.total").value(1))
                 .andExpect(jsonPath("$.data[0].serviceId").value(service.getServiceId()))
                 .andExpect(jsonPath("$.data[0].address").value("CI养老服务中心"));
+
+        mockMvc.perform(post("/api/services/update/" + service.getServiceId())
+                        .header("Authorization", authorization)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"remark\":\"预约前修改成功\"}"))
+                .andExpect(status().isOk());
+        assertThat(serviceRepository.findById(service.getServiceId()).orElseThrow().getServiceDes())
+                .isEqualTo("预约前修改成功");
     }
 
     @Test
@@ -262,6 +270,15 @@ class CriticalUserJourneyIntegrationTest {
         mockMvc.perform(post("/api/services/" + id + "/applications/" + chosenApplicationId + "/approve")
                         .header("Authorization", elderToken))
                 .andExpect(status().isConflict());
+
+        // 订单已经获批接单，即使还没开始，也不能暗中改住址/时间破坏员工同意的范围。
+        mockMvc.perform(post("/api/services/update/" + id)
+                        .header("Authorization", elderToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"address\":\"未经员工同意更换住址\"}"))
+                .andExpect(status().isConflict());
+        assertThat(serviceRepository.findById(id).orElseThrow().getAppointedAddress())
+                .isEqualTo("绝不能提前泄露的住址");
 
         // 未批准的员工不能操作履约；批准后仍不能跳过开始和完工申请。
         mockMvc.perform(post("/api/services/" + id + "/start").header("Authorization", otherToken))

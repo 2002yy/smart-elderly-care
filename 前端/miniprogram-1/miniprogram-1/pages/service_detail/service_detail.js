@@ -248,8 +248,8 @@ Page({
     if (userType === 0 || userType === 1) {
       showApplicantsBtn = status === 0;
       showConfirmCompletionBtn = status === 2 && !!this.data.serviceData.completionRequestedAt;
-      if (status === 0 || status === 1) {
-        showModifyBtn = true; // 未指派或待进行状态可以修改
+      if (status === 0) {
+        showModifyBtn = true; // 未指派时可修改；获批接单后需取消重新预约
       } else if (status === 3) {
         showPayBtn = true; // 待支付状态显示支付按钮
       } else if (status === 4) {

@@ -4,6 +4,7 @@ import com.hecs.mini_program_backend.entity.Service;
 import com.hecs.mini_program_backend.entity.User;
 import com.hecs.mini_program_backend.service.BindService;
 import com.hecs.mini_program_backend.service.ServiceApplicationService;
+import com.hecs.mini_program_backend.service.ServiceAppointmentService;
 import com.hecs.mini_program_backend.service.ServiceFulfillmentService;
 import com.hecs.mini_program_backend.service.ServiceService;
 import com.hecs.mini_program_backend.service.UserService;
@@ -47,6 +48,9 @@ public class ServiceController {
 
     @Autowired
     private ServiceFulfillmentService fulfillmentService;
+
+    @Autowired
+    private ServiceAppointmentService appointmentService;
 
     private boolean canCreateServiceFor(User user, Integer targetId) {
         if (user.getId() == null || user.getUserType() == null || targetId == null) {
@@ -227,7 +231,6 @@ public class ServiceController {
             serviceMap.put("id", service.getServiceId());
             serviceMap.put("serviceId", service.getServiceId());
             
-            logger.debug("Returning service data: {}", serviceMap);
             
             return ResponseEntity.ok(serviceMap);
         } catch (JwtException e) {
@@ -244,7 +247,7 @@ public class ServiceController {
             @RequestHeader("Authorization") String token,
             @RequestBody Map<String, Object> body) {
         try {
-            logger.info("Create service request: {}", body);
+            logger.info("Create service request received");
             
             String openId = TokenParse.parseToken(token.replace("Bearer ", "")).openId();
             User user = userService.getUserByOpenId(openId);
@@ -330,7 +333,7 @@ public class ServiceController {
             @PathVariable Integer id,
             @RequestBody Map<String, Object> body) {
         try {
-            logger.info("Update service request for ID {}: {}", id, body);
+            logger.info("Update service request for ID {}", id);
             
             // 解析token
             String openId = TokenParse.parseToken(token.replace("Bearer ", "")).openId();
@@ -362,27 +365,8 @@ public class ServiceController {
                         .body(Map.of("message", "不能通过资料编辑接口更换服务对象"));
             }
             
-            // 更新服务
-            if (body.containsKey("type")) {
-                service.setServiceType(Integer.parseInt(body.get("type").toString()));
-                logger.debug("Updated service type to: {}", service.getServiceType());
-            }
-            if (body.containsKey("scheduledTime")) {
-                service.setScheduledTime(Instant.parse(body.get("scheduledTime").toString()));
-                logger.debug("Updated scheduled time to: {}", service.getScheduledTime());
-            }
-            if (body.containsKey("address")) {
-                service.setAppointedAddress(body.get("address").toString());
-                logger.debug("Updated address to: {}", service.getAppointedAddress());
-            }
-            if (body.containsKey("remark")) {
-                service.setServiceDes(body.get("remark").toString());
-                logger.debug("Updated description to: {}", service.getServiceDes());
-            }
-            
-            // 保存服务
-            logger.info("Saving service updates for ID: {}", id);
-            Service updatedService = serviceService.updateService(service);
+            // 在同一事务及行锁下重新核对授权与状态，避免旧实体覆盖履约状态。
+            Service updatedService = appointmentService.edit(id, user, body);
             logger.info("Service updated successfully for ID: {}", id);
             
             Map<String, Object> responseMap = new HashMap<>();
@@ -397,6 +381,8 @@ public class ServiceController {
         } catch (NumberFormatException e) {
             logger.error("Invalid number format in service update", e);
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", "无效的数值格式: " + e.getMessage()));
+        } catch (ResponseStatusException e) {
+            return ResponseEntity.status(e.getStatusCode()).body(Map.of("message", e.getReason()));
         } catch (Exception e) {
             logger.error("Error updating service with ID: {}", id, e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("message", "更新服务失败: " + e.getMessage()));
@@ -491,7 +477,7 @@ public class ServiceController {
             Service updatedService;
             try {
                 // 记录收到的请求体以便调试
-                logger.info("Received evaluation request body: {}", body);
+                logger.info("Received evaluation request for service {}", id);
                 
                 // 设置评分 - 检查多个可能的字段名
                 if (body.containsKey("serviceEvaluationStars")) {

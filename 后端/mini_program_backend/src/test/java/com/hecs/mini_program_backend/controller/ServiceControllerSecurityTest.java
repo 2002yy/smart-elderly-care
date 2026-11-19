@@ -4,6 +4,7 @@ import com.hecs.mini_program_backend.entity.Service;
 import com.hecs.mini_program_backend.entity.User;
 import com.hecs.mini_program_backend.service.ServiceService;
 import com.hecs.mini_program_backend.service.ServiceApplicationService;
+import com.hecs.mini_program_backend.service.ServiceAppointmentService;
 import com.hecs.mini_program_backend.service.ServiceFulfillmentService;
 import com.hecs.mini_program_backend.service.UserService;
 import io.jsonwebtoken.Jwts;
@@ -21,6 +22,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.Date;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyMap;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -37,6 +40,7 @@ class ServiceControllerSecurityTest {
     private ServiceService serviceService;
     private ServiceApplicationService applicationService;
     private ServiceFulfillmentService fulfillmentService;
+    private ServiceAppointmentService appointmentService;
     private UserService userService;
     private MockMvc mockMvc;
 
@@ -45,12 +49,14 @@ class ServiceControllerSecurityTest {
         serviceService = mock(ServiceService.class);
         applicationService = mock(ServiceApplicationService.class);
         fulfillmentService = mock(ServiceFulfillmentService.class);
+        appointmentService = mock(ServiceAppointmentService.class);
         userService = mock(UserService.class);
 
         ServiceController controller = new ServiceController();
         ReflectionTestUtils.setField(controller, "serviceService", serviceService);
         ReflectionTestUtils.setField(controller, "applicationService", applicationService);
         ReflectionTestUtils.setField(controller, "fulfillmentService", fulfillmentService);
+        ReflectionTestUtils.setField(controller, "appointmentService", appointmentService);
         ReflectionTestUtils.setField(controller, "userService", userService);
 
         when(applicationService.isDeclaredWorker(any(User.class))).thenAnswer(invocation -> {
@@ -158,7 +164,7 @@ class ServiceControllerSecurityTest {
                         .content("{\"address\":\"私自改地址\"}"))
                 .andExpect(status().isForbidden());
 
-        verify(serviceService, never()).updateService(any(Service.class));
+        verify(appointmentService, never()).edit(eq(10), eq(requester), anyMap());
     }
 
     @Test
@@ -174,7 +180,7 @@ class ServiceControllerSecurityTest {
                         .content("{\"address\":\"恶意覆盖\",\"status\":5,\"serviceStatus\":4}"))
                 .andExpect(status().isForbidden());
 
-        verify(serviceService, never()).updateService(any(Service.class));
+        verify(appointmentService, never()).edit(eq(10), eq(requester), anyMap());
         org.junit.jupiter.api.Assertions.assertEquals(0, service.getServiceStatus());
     }
 
@@ -184,7 +190,10 @@ class ServiceControllerSecurityTest {
         Service service = service(10, 1, 2, 3, 0);
         when(userService.getUserByOpenId("creator")).thenReturn(requester);
         when(serviceService.getServiceById(10)).thenReturn(service);
-        when(serviceService.updateService(any(Service.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(appointmentService.edit(eq(10), eq(requester), anyMap())).thenAnswer(invocation -> {
+            service.setServiceDes("修改后的预约说明");
+            return service;
+        });
 
         mockMvc.perform(post("/api/services/update/10")
                         .header("Authorization", bearer("creator", 0))
@@ -193,7 +202,7 @@ class ServiceControllerSecurityTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true));
 
-        verify(serviceService).updateService(service);
+        verify(appointmentService).edit(eq(10), eq(requester), anyMap());
         org.junit.jupiter.api.Assertions.assertEquals("修改后的预约说明", service.getServiceDes());
     }
 
@@ -210,7 +219,7 @@ class ServiceControllerSecurityTest {
                         .content("{\"targetId\":99,\"address\":\"同时修改地址\"}"))
                 .andExpect(status().isBadRequest());
 
-        verify(serviceService, never()).updateService(any(Service.class));
+        verify(appointmentService, never()).edit(eq(10), eq(requester), anyMap());
         org.junit.jupiter.api.Assertions.assertEquals(2, service.getTargetId());
         org.junit.jupiter.api.Assertions.assertNull(service.getAppointedAddress());
     }
