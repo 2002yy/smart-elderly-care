@@ -13,7 +13,7 @@
               disabled="{{isEdit}}">
         <view class="picker-content">
           <text class="{{formData.targetIndex === -1 ? 'placeholder' : ''}}">
-            {{formData.targetIndex === -1 ? '请选择服务对象' : serviceTargetNames[formData.targetIndex]}}
+            {{formData.targetIndex === -1 ? (isEdit ? formData.targetName : '请选择服务对象') : serviceTargetNames[formData.targetIndex]}}
           </text>
           <image class="picker-arrow" src="/resources/arrow-right.png"></image>
         </view>
@@ -89,4 +89,4 @@
       {{isEdit ? '确认修改' : '创建服务'}}
     </button>
   </form>
-</view> 
+</view>

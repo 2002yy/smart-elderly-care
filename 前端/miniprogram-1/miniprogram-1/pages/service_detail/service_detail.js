@@ -369,75 +369,13 @@ Page({
       }
     });
   },
-  
+
   // 修改服务
   onModifyService: function() {
     var serviceId = this.data.serviceId;
-    console.log('跳转到修改服务页面，ID:', serviceId);
-    
-    // 直接从服务器获取最新的服务数据
-    var token = wx.getStorageSync('token');
-    var that = this;
-    
-    wx.showLoading({
-      title: '加载中...'
-    });
-    
-    wx.request({
-      url: app.globalData.baseUrl + '/api/services/' + serviceId,
-      method: 'GET',
-      header: {
-        'Authorization': token
-      },
-      success: function(res) {
-        wx.hideLoading();
-        
-        if (res.statusCode === 200) {
-          
-          // 将服务数据添加到缓存
-          var cachedServices = wx.getStorageSync('serviceInfo') || [];
-          var service = res.data;
-          var found = false;
-          
-          // 检查是否已存在于缓存中
-          for (var i = 0; i < cachedServices.length; i++) {
-            if ((cachedServices[i].id === serviceId) || 
-                (cachedServices[i].serviceId === serviceId) || 
-                (cachedServices[i].serviceId === parseInt(serviceId))) {
-              // 更新现有服务
-              cachedServices[i] = service;
-              found = true;
-              break;
-            }
-          }
-          
-          // 不存在则添加
-          if (!found) {
-            cachedServices.push(service);
-          }
-          
-          // 更新缓存
-          wx.setStorageSync('serviceInfo', cachedServices);
-          
-          // 跳转到修改页面
-          wx.navigateTo({
-            url: '/pages/service_create/service_create?id=' + serviceId
-          });
-        } else {
-          wx.showToast({
-            title: res.data.message || '获取服务详情失败',
-            icon: 'none'
-          });
-        }
-      },
-      fail: function(err) {
-        wx.hideLoading();
-        console.error('获取服务详情失败:', err);
-        wx.showToast({
-          title: '网络请求失败',
-          icon: 'none'
-        });
-      }
+    // 由编辑页单次读取原始服务端数据，避免二次请求和缓存回填旧状态。
+    wx.navigateTo({
+      url: '/pages/service_create/service_create?id=' + serviceId
     });
   },
   
