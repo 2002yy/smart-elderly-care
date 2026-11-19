@@ -3,6 +3,8 @@ const config = require('./config');
 
 App({
   onLaunch: function () {
+    // 清除旧版本持久化的完整服务订单；页面从服务端按权限重新读取。
+    wx.removeStorageSync('serviceInfo');
     // 展示本地存储能力
     const logs = wx.getStorageSync('logs') || [];
     logs.unshift(Date.now());
@@ -41,4 +43,4 @@ App({
     networkType: 'unknown',
     selectedServiceStatus: undefined
   }
-}); 
+});

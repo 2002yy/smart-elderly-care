@@ -561,9 +561,6 @@ Page({
             icon: 'success'
           });
           
-          // 清除缓存的服务信息以触发刷新
-          wx.removeStorageSync('serviceInfo');
-
           setTimeout(() => {
             wx.switchTab({
               url: '/pages/service_list/service_list'

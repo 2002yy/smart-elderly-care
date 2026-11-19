@@ -1,28 +1,5 @@
 const app = getApp();
-
-// 补零函数，替代padStart
-function padZero(num) {
-  return num < 10 ? '0' + num : '' + num;
-}
-
-// 将UTC时间转换为北京时间（UTC+8）并格式化
-function formatTime(dateStr) {
-  if (!dateStr) return '';
-  try {
-    const date = new Date(dateStr);
-    const beijingDate = new Date(date.getTime() + 8 * 60 * 60 * 1000);
-    const year = beijingDate.getFullYear();
-    const month = padZero(beijingDate.getMonth() + 1);
-    const day = padZero(beijingDate.getDate());
-    const hour = padZero(beijingDate.getHours());
-    const minute = padZero(beijingDate.getMinutes());
-    
-    return `${year}-${month}-${day} ${hour}:${minute}`;
-  } catch (e) {
-    console.error('日期格式化错误:', e);
-    return dateStr;
-  }
-}
+const { formatBeijingTime } = require('../../utils/serviceTime.js');
 
 Page({
   data: {
@@ -38,73 +15,22 @@ Page({
   onLoad(options) {
     if (options.id) {
       this.setData({ serviceId: options.id });
-      this.loadServiceData();
     } else {
       wx.showToast({ title: '参数错误', icon: 'none' });
       wx.navigateBack();
     }
   },
 
-  // 加载服务数据
-  loadServiceData() {
-    try {
-      console.log('加载服务数据，服务ID:', this.data.serviceId);
-      
-      // 将serviceId转换为多种可能的格式进行查找
-      const serviceId = this.data.serviceId;
-      const serviceIdInt = parseInt(serviceId);
-      
-      const cachedServices = wx.getStorageSync('serviceInfo') || [];
-      console.log('缓存中的服务数据:', cachedServices);
-      
-      // 使用多种格式匹配查找服务
-      const service = cachedServices.find(s => 
-        s.id === serviceId || 
-        s.serviceId === serviceId || 
-        s.id === serviceIdInt || 
-        s.serviceId === serviceIdInt
-      );
-      
-      console.log('找到的服务数据:', service);
-
-      if (service) {
-        // 处理服务数据，确保字段名一致
-        const processedService = {
-          id: service.serviceId || service.id || serviceId,
-          status: service.serviceStatus !== undefined ? service.serviceStatus : (service.status || 4),
-          type: service.serviceType !== undefined ? service.serviceType : (service.type || 0),
-          scheduledTime: formatTime(service.scheduledTime) || '未设置',
-          address: service.appointedAddress || service.address || '未设置',
-          remark: service.serviceDes || service.remark || '',
-          targetId: service.targetId || '',
-          targetName: service.targetName || '未知',
-          providerId: service.providerId || '',
-          providerName: service.providerName || '未知',
-          staffName: service.providerName || service.staffName || '未知', // 用于前端显示
-          clientName: service.targetName || '未知' // 用于前端显示
-        };
-        
-        console.log('处理后的服务数据:', processedService);
-        
-        this.setData({ serviceData: processedService });
-      } else {
-        // 如果缓存没有，尝试从服务器获取
-        this.fetchServiceFromServer(serviceId);
-      }
-    } catch (error) {
-      console.error('加载服务数据出错:', error);
-      wx.showToast({ 
-        title: '加载服务数据失败', 
-        icon: 'none' 
-      });
-      setTimeout(() => wx.navigateBack(), 1500);
-    }
+  onShow() {
+    if (this.data.serviceId) this.fetchServiceFromServer(this.data.serviceId);
   },
   
-  // 从服务器获取服务数据
+  // 评价页不信任任何持久缓存；每次展示均重新核对订单状态和当前用户。
   fetchServiceFromServer(serviceId) {
-    console.log('从服务器获取服务数据，ID:', serviceId);
+    this.setData({ serviceData: null });
     const token = wx.getStorageSync('token');
+    const requestVersion = (this._detailRequestVersion || 0) + 1;
+    this._detailRequestVersion = requestVersion;
     
     if (!token) {
       wx.showToast({ title: '请先登录', icon: 'none' });
@@ -120,36 +46,29 @@ Page({
         'Authorization': token
       },
       success: (res) => {
+        if (requestVersion !== this._detailRequestVersion || token !== wx.getStorageSync('token')) return;
         wx.hideLoading();
         
         if (res.statusCode === 200 && res.data) {
-          console.log('服务器返回的服务数据:', res.data);
-          
           const service = res.data;
-          
-          // 处理服务数据
-          const processedService = {
+          const status = service.serviceStatus !== undefined ? service.serviceStatus : service.status;
+          const currentUser = wx.getStorageSync('userInfo') || {};
+          if (status !== 4 || String(service.targetId) !== String(currentUser.id)) {
+            wx.showToast({ title: '当前订单不可评价', icon: 'none' });
+            setTimeout(() => wx.navigateBack(), 1500);
+            return;
+          }
+          this.setData({ serviceData: {
             id: service.serviceId || service.id || serviceId,
-            status: service.serviceStatus !== undefined ? service.serviceStatus : (service.status || 4),
-            type: service.serviceType !== undefined ? service.serviceType : (service.type || 0),
-            scheduledTime: formatTime(service.scheduledTime) || '未设置',
+            status,
+            type: service.serviceType !== undefined ? service.serviceType : service.type,
+            scheduledTime: formatBeijingTime(service.scheduledTime, true) || '未设置',
             address: service.appointedAddress || service.address || '未设置',
             remark: service.serviceDes || service.remark || '',
-            targetId: service.targetId || '',
             targetName: service.targetName || '未知',
-            providerId: service.providerId || '',
-            providerName: service.providerName || '未知',
             staffName: service.providerName || service.staffName || '未知',
             clientName: service.targetName || '未知'
-          };
-          
-          // 更新本地数据
-          this.setData({ serviceData: processedService });
-          
-          // 更新缓存
-          const cachedServices = wx.getStorageSync('serviceInfo') || [];
-          cachedServices.push(processedService);
-          wx.setStorageSync('serviceInfo', cachedServices);
+          } });
         } else {
           wx.showToast({ 
             title: res.data && res.data.message ? res.data.message : '获取服务数据失败', 
@@ -159,6 +78,7 @@ Page({
         }
       },
       fail: (err) => {
+        if (requestVersion !== this._detailRequestVersion || token !== wx.getStorageSync('token')) return;
         wx.hideLoading();
         console.error('获取服务数据失败:', err);
         wx.showToast({ title: '网络请求失败', icon: 'none' });
@@ -205,7 +125,7 @@ Page({
 
   // 表单提交
   onSubmit() {
-    if (this.data.isSubmitting) return;
+    if (this.data.isSubmitting || !this.data.serviceData) return;
 
     const { rating, comment, serviceId } = this.data;
     
@@ -219,16 +139,9 @@ Page({
 
     const token = wx.getStorageSync('token');
     
-    console.log('准备提交评价：', {
-      serviceId: serviceId,
-      rating: rating,
-      comment: comment
-    });
-
     // 构建评价请求数据
     const requestData = {
-      serviceEvaluationStars: rating, // 使用正确的字段名
-      status: 5 // 将服务状态设置为5（存档）
+      serviceEvaluationStars: rating // 状态由服务端决定
     };
     
     // 仅当评论不为空时添加评价备注字段
@@ -236,8 +149,6 @@ Page({
       requestData.serviceEvaluationNotes = comment; // 使用正确的字段名
     }
     
-    console.log('发送评价请求数据:', requestData);
-
     wx.request({
       url: `${app.globalData.baseUrl}/api/services/evaluate/${serviceId}`,
       method: 'POST',
@@ -247,14 +158,8 @@ Page({
       },
       data: requestData,
       success: (res) => {
-        console.log('评价请求响应:', res);
-        console.log('评价请求响应数据:', res.data);
-        
         if (res.statusCode === 200) {
           wx.showToast({ title: '评价成功', icon: 'success' });
-          
-          // 清除缓存，确保下次刷新获取最新数据
-          wx.removeStorageSync('serviceInfo');
           
           // 延迟返回
           setTimeout(() => {
@@ -314,4 +219,4 @@ Page({
   onSubmitTouchEnd() {
     this.setData({ submitActive: false });
   }
-}); 
+});

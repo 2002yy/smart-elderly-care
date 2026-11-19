@@ -41,9 +41,6 @@ Page({
 
   onRefresh() {
     console.log('刷新服务列表');
-    // 清除缓存，确保获取最新数据
-    wx.removeStorageSync('serviceInfo');
-    // 重新加载服务
     this.loadServices();
   },
 
@@ -145,40 +142,9 @@ Page({
   // 查看服务详情
   navigateToDetail(e) {
     const serviceId = e.currentTarget.dataset.id;
-    console.log('正在跳转到服务详情页，ID:', serviceId);
-    
-    // 确保缓存中有这个服务的数据
-    const cachedServices = wx.getStorageSync('serviceInfo') || [];
-    const service = cachedServices.find(s => 
-      s.id === serviceId || 
-      s.serviceId === serviceId || 
-      s.id === parseInt(serviceId) || 
-      s.serviceId === parseInt(serviceId)
-    );
-    
-    if (service) {
-      wx.navigateTo({
-        url: `/pages/service_detail/service_detail?id=${serviceId}`
-      });
-    } else {
-      // 如果缓存中没有找到，刷新列表后再跳转
-      wx.showToast({
-        title: '正在刷新服务数据...',
-        icon: 'loading',
-        duration: 1000
-      });
-      
-      // 清除缓存并重新加载
-      wx.removeStorageSync('serviceInfo');
-      this.loadServices();
-      
-      // 延迟导航，给loadServices一些时间来更新缓存
-      setTimeout(() => {
-        wx.navigateTo({
-          url: `/pages/service_detail/service_detail?id=${serviceId}`
-        });
-      }, 1500);
-    }
+    // 详情页自行向服务端验证权限，不要求订单先写进持久缓存。
+    if (!serviceId) return;
+    wx.navigateTo({ url: `/pages/service_detail/service_detail?id=${serviceId}` });
   },
 
   // 加载更多
@@ -242,7 +208,7 @@ Page({
         'Authorization': token
       },
       success: function(res) {
-        if (requestVersion !== that._serviceRequestVersion) return;
+        if (requestVersion !== that._serviceRequestVersion || token !== wx.getStorageSync('token')) return;
         if (requestedPage === 1) wx.hideLoading();
         
         if (res.statusCode === 200 && res.data && res.data.data) {
@@ -296,9 +262,6 @@ Page({
           });
           
           var loadedServices = requestedPage === 1 ? services : that.data.services.concat(services);
-          // 缓存与页面始终表示已从服务器取得的订单，而不是假设后续页存在。
-          wx.setStorageSync('serviceInfo', loadedServices);
-          
           that.setData({
             services: loadedServices,
             page: requestedPage,
@@ -325,7 +288,7 @@ Page({
         }
       },
       fail: function(err) {
-        if (requestVersion !== that._serviceRequestVersion) return;
+        if (requestVersion !== that._serviceRequestVersion || token !== wx.getStorageSync('token')) return;
         if (requestedPage === 1) wx.hideLoading();
         
         that.setData({

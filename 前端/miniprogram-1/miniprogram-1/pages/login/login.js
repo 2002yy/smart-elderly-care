@@ -63,10 +63,10 @@ Page({
       success: (res) => {
         if (res.statusCode === 200) {
           // 登录成功，服务器返回的数据通常包含用户的 openid 和自定义登录态（如 token）
-          const { token, userInfo, serviceInfo, emergencyInfo, bindInfo } = res.data;
+          const { token, userInfo, emergencyInfo, bindInfo } = res.data;
           
           // 存储数据到本地
-          this.storeUserData(token, userInfo, serviceInfo, emergencyInfo, bindInfo);
+          this.storeUserData(token, userInfo, emergencyInfo, bindInfo);
           
           // 根据用户类型跳转
           this.navigateAfterLogin(userInfo);
@@ -91,13 +91,14 @@ Page({
   /**
    * 存储用户数据到本地存储
    */
-  storeUserData(token, userInfo, serviceInfo, emergencyInfo, bindInfo) {
+  storeUserData(token, userInfo, emergencyInfo, bindInfo) {
     try {
+      // 旧版本曾持久缓存完整订单（含住址、老人姓名），不再保留它。
+      wx.removeStorageSync('serviceInfo');
       wx.setStorageSync('token', token);
       wx.setStorageSync('userInfo', userInfo);
       
-      // 确保数据是数组，即使是空的
-      wx.setStorageSync('serviceInfo', Array.isArray(serviceInfo) ? serviceInfo : []);
+      // 其他信息仍沿用既有存储契约。
       wx.setStorageSync('emergencyInfo', Array.isArray(emergencyInfo) ? emergencyInfo : []);
       wx.setStorageSync('bindInfo', Array.isArray(bindInfo) ? bindInfo : []);
       
