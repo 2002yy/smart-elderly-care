@@ -177,6 +177,11 @@ Page({
       },
       success: (res) => {
         if (res.statusCode === 200) {
+          if (status === 2) {
+            // 主动解除绑定后，立即移除旧联系人缓存，不等待下一次拉取成功。
+            wx.removeStorageSync('bindInfo');
+            this.setData({ bindInfo: [], pendingBinds: [], activeBinds: [] });
+          }
           wx.showToast({
             title: status === 1 ? '已接受绑定' : '已解除绑定',
             icon: 'success',

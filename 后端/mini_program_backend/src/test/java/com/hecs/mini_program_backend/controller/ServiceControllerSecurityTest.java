@@ -5,6 +5,7 @@ import com.hecs.mini_program_backend.entity.User;
 import com.hecs.mini_program_backend.service.ServiceService;
 import com.hecs.mini_program_backend.service.ServiceApplicationService;
 import com.hecs.mini_program_backend.service.ServiceAppointmentService;
+import com.hecs.mini_program_backend.service.ServiceCustomerAccess;
 import com.hecs.mini_program_backend.service.ServiceFulfillmentService;
 import com.hecs.mini_program_backend.service.UserService;
 import io.jsonwebtoken.Jwts;
@@ -41,6 +42,7 @@ class ServiceControllerSecurityTest {
     private ServiceApplicationService applicationService;
     private ServiceFulfillmentService fulfillmentService;
     private ServiceAppointmentService appointmentService;
+    private ServiceCustomerAccess customerAccess;
     private UserService userService;
     private MockMvc mockMvc;
 
@@ -50,6 +52,7 @@ class ServiceControllerSecurityTest {
         applicationService = mock(ServiceApplicationService.class);
         fulfillmentService = mock(ServiceFulfillmentService.class);
         appointmentService = mock(ServiceAppointmentService.class);
+        customerAccess = mock(ServiceCustomerAccess.class);
         userService = mock(UserService.class);
 
         ServiceController controller = new ServiceController();
@@ -57,12 +60,20 @@ class ServiceControllerSecurityTest {
         ReflectionTestUtils.setField(controller, "applicationService", applicationService);
         ReflectionTestUtils.setField(controller, "fulfillmentService", fulfillmentService);
         ReflectionTestUtils.setField(controller, "appointmentService", appointmentService);
+        ReflectionTestUtils.setField(controller, "customerAccess", customerAccess);
         ReflectionTestUtils.setField(controller, "userService", userService);
 
         when(applicationService.isDeclaredWorker(any(User.class))).thenAnswer(invocation -> {
             User candidate = invocation.getArgument(0);
             return candidate.getUserType() != null && candidate.getUserType() >= 2
                     && candidate.getUserType() <= 4;
+        });
+        // 这里仅验证 controller 是否使用客户权限门禁；绑定状态由 H2 关键路径测试覆盖。
+        when(customerAccess.canManageService(any(Service.class), any(User.class))).thenAnswer(invocation -> {
+            Service service = invocation.getArgument(0);
+            User requester = invocation.getArgument(1);
+            return requester.getId().equals(service.getCreatorId())
+                    || requester.getId().equals(service.getTargetId());
         });
 
         mockMvc = MockMvcBuilders.standaloneSetup(controller).build();

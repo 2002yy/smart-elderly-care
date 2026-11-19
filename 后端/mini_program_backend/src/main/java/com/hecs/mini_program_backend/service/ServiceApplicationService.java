@@ -25,6 +25,9 @@ public class ServiceApplicationService {
     @Autowired
     private UserService userService;
 
+    @Autowired
+    private ServiceCustomerAccess customerAccess;
+
     public boolean isDeclaredWorker(User user) {
         return user != null && user.getId() != null && user.getUserType() != null
                 && user.getUserType() >= 2 && user.getUserType() <= 4;
@@ -106,8 +109,7 @@ public class ServiceApplicationService {
     }
 
     private void requireEditor(Service service, User user) {
-        if (user == null || user.getId() == null || (!user.getId().equals(service.getCreatorId())
-                && !user.getId().equals(service.getTargetId()))) {
+        if (!customerAccess.canManageService(service, user)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "无权管理此服务的接单申请");
         }
     }

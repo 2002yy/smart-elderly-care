@@ -20,14 +20,15 @@ public class ServiceAppointmentService {
     @Autowired
     private ServiceRepository serviceRepository;
 
+    @Autowired
+    private ServiceCustomerAccess customerAccess;
+
     @Transactional
     public Service edit(Integer serviceId, User customer, Map<String, Object> body) {
         // 与批准接单、开始服务、取消订单共用订单行锁。
         Service service = serviceRepository.lockByServiceId(serviceId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "服务不存在"));
-        if (customer == null || customer.getId() == null
-                || (!customer.getId().equals(service.getCreatorId())
-                    && !customer.getId().equals(service.getTargetId()))) {
+        if (!customerAccess.canManageService(service, customer)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "无权修改此服务");
         }
         // 指派后的地址、时间和服务内容涉及员工已接受的订单，不能静默变更。

@@ -5,6 +5,7 @@ import com.hecs.mini_program_backend.entity.User;
 import com.hecs.mini_program_backend.service.BindService;
 import com.hecs.mini_program_backend.service.ServiceApplicationService;
 import com.hecs.mini_program_backend.service.ServiceAppointmentService;
+import com.hecs.mini_program_backend.service.ServiceCustomerAccess;
 import com.hecs.mini_program_backend.service.ServiceFulfillmentService;
 import com.hecs.mini_program_backend.service.ServiceService;
 import com.hecs.mini_program_backend.service.UserService;
@@ -52,6 +53,9 @@ public class ServiceController {
     @Autowired
     private ServiceAppointmentService appointmentService;
 
+    @Autowired
+    private ServiceCustomerAccess customerAccess;
+
     private boolean canCreateServiceFor(User user, Integer targetId) {
         if (user.getId() == null || user.getUserType() == null || targetId == null) {
             return false;
@@ -67,12 +71,7 @@ public class ServiceController {
     }
 
     private boolean isServiceEditor(Service service, User user) {
-        if (user == null || user.getId() == null) {
-            return false;
-        }
-        Integer userId = user.getId();
-        return userId.equals(service.getCreatorId())
-                || userId.equals(service.getTargetId());
+        return customerAccess.canManageService(service, user);
     }
 
     private boolean isServiceParticipant(Service service, User user) {
@@ -410,7 +409,7 @@ public class ServiceController {
             }
             
             // 检查权限
-            if (!service.getCreatorId().equals(user.getId()) && !service.getTargetId().equals(user.getId())) {
+            if (!isServiceEditor(service, user)) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body("无权取消此服务");
             }
             // 履约开始后不得通过历史取消接口硬删除订单与评价事实。

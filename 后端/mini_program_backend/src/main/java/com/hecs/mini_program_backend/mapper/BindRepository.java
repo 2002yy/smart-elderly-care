@@ -11,5 +11,6 @@ public interface BindRepository extends JpaRepository<Bind,Integer> {
     List<Bind> findByElderId(Integer elderId);
     List<Bind> findByGuardianId(Integer guardianId);
     List<Bind> findByElderIdAndGuardianId(Integer elderId, Integer guardianId);
+    boolean existsByElderIdAndGuardianIdAndBindStatus(Integer elderId, Integer guardianId, Integer bindStatus);
     Bind findByBindId(Integer bindId);
 }

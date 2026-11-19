@@ -49,6 +49,8 @@ public class BindController {
             // 处理绑定关系，添加用户名称
             List<Map<String, Object>> bindingsList = new ArrayList<>();
             for (Bind bind : bindList) {
+                if (!Integer.valueOf(0).equals(bind.getBindStatus())
+                        && !Integer.valueOf(1).equals(bind.getBindStatus())) continue;
                 Map<String, Object> bindingMap = new HashMap<>();
 
                 Integer partnerId = user.getUserType() == 0 ? bind.getGuardianId() : bind.getElderId();

@@ -146,6 +146,71 @@ class CriticalUserJourneyIntegrationTest {
     }
 
     @Test
+    void revokingGuardianBindingRemovesOrderAccessButKeepsEldersOrder() throws Exception {
+        User guardian = saveUser("ci-revoked-guardian", 1, "已解绑监护人");
+        User elder = saveUser("ci-revoked-elder", 0, "解除绑定的老人");
+        Bind binding = new Bind();
+        binding.setGuardianId(guardian.getId());
+        binding.setElderId(elder.getId());
+        binding.setInitiatorId(guardian.getId());
+        binding.setBindStatus(1);
+        binding = bindRepository.saveAndFlush(binding);
+
+        Service service = new Service();
+        service.setCreatorId(guardian.getId());
+        service.setTargetId(elder.getId());
+        service.setProviderId(0);
+        service.setServiceStatus(0);
+        service.setServiceType(1);
+        service.setAppointedAddress("解除绑定后不得再查看的住址");
+        int id = serviceRepository.saveAndFlush(service).getServiceId();
+        String guardianToken = "Bearer " + new TokenGenerate().TokenGenerate(
+                guardian.getOpenId(), guardian.getUserType());
+        String elderToken = "Bearer " + new TokenGenerate().TokenGenerate(
+                elder.getOpenId(), elder.getUserType());
+
+        mockMvc.perform(get("/api/services").header("Authorization", guardianToken))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.total").value(1));
+        mockMvc.perform(get("/api/services/" + id).header("Authorization", guardianToken))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.address").value("解除绑定后不得再查看的住址"));
+
+        mockMvc.perform(put("/api/bindings/%d/status".formatted(binding.getBindId()))
+                        .header("Authorization", elderToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"bind_status\":2}"))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/services").header("Authorization", guardianToken))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.total").value(0));
+        mockMvc.perform(get("/api/services").header("Authorization", guardianToken).param("status", "1"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.total").value(0));
+        mockMvc.perform(get("/api/services/" + id).header("Authorization", guardianToken))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(post("/api/services/update/" + id).header("Authorization", guardianToken)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"address\":\"试图绕过解绑\"}"))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(post("/api/services/cancel/" + id).header("Authorization", guardianToken))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/services/" + id + "/applications").header("Authorization", guardianToken))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(post("/api/services/" + id + "/applications/1/approve")
+                        .header("Authorization", guardianToken))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(post("/api/services/" + id + "/confirm-completion")
+                        .header("Authorization", guardianToken))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/bindings").header("Authorization", guardianToken))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.length()").value(0));
+
+        // 解绑不删服务历史；老人本人依然可以管理，避免订单凭空消失。
+        mockMvc.perform(get("/api/services").header("Authorization", elderToken))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.total").value(1));
+        mockMvc.perform(get("/api/services/" + id).header("Authorization", elderToken))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.address").value("解除绑定后不得再查看的住址"));
+        assertThat(serviceRepository.findById(id)).isPresent();
+    }
+
+    @Test
     void statusFilteredPagesReturnAllOrdersWithoutLeakingOtherUsers() throws Exception {
         User owner = saveUser("ci-paged-owner", 0, "分页测试老人");
         User other = saveUser("ci-paged-other", 0, "另一位老人");
