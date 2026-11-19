@@ -113,23 +113,23 @@ public class LoginController {
                     .filter(bind -> Integer.valueOf(0).equals(bind.getBindStatus())
                             || Integer.valueOf(1).equals(bind.getBindStatus()))
                     .map(bind -> {
-                Map<String, Object> bindingMap = new HashMap<>();
-                Integer partnerId = currentUser.getUserType() == 0 ? bind.getGuardianId() : bind.getElderId();
-                User partner = userService.getUserById(partnerId);
-                bindingMap.put("id", bind.getBindId());
-                bindingMap.put("partnerId", partnerId);
-                bindingMap.put("bind_status", bind.getBindStatus());
-                if (partner != null) {
-                    bindingMap.put("name", partner.getNickname());
-                    bindingMap.put("phone", partner.getPhoneNumber());
-                }
+                        Map<String, Object> bindingMap = new HashMap<>();
+                        Integer partnerId = currentUser.getUserType() == 0 ? bind.getGuardianId() : bind.getElderId();
+                        User partner = userService.getUserById(partnerId);
+                        bindingMap.put("id", bind.getBindId());
+                        bindingMap.put("partnerId", partnerId);
+                        bindingMap.put("bind_status", bind.getBindStatus());
+                        if (partner != null) {
+                            bindingMap.put("name", partner.getNickname());
+                            bindingMap.put("phone", partner.getPhoneNumber());
+                        }
 
-                Integer initiatorId = bind.getInitiatorId();
-                boolean isActionable = bind.getBindStatus() == 0
-                        && initiatorId != null
-                        && !initiatorId.equals(currentUser.getId());
-                bindingMap.put("is_actionable", isActionable);
-                return bindingMap;
+                        Integer initiatorId = bind.getInitiatorId();
+                        boolean isActionable = bind.getBindStatus() == 0
+                                && initiatorId != null
+                                && !initiatorId.equals(currentUser.getId());
+                        bindingMap.put("is_actionable", isActionable);
+                        return bindingMap;
                     }).collect(Collectors.toList());
 
             List<Emergency> emergencyInfo = currentUser.getUserType() != null && currentUser.getUserType() == 0

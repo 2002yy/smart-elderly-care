@@ -19,12 +19,14 @@ public interface ServiceRepository extends JpaRepository<Service,Integer> {
     // 监护关系解除后，历史订单仍属于老人，但不再向原创建监护人返回姓名/地址。
     @Query("SELECT s FROM Service s WHERE s.targetId = :userId OR "
             + "(s.creatorId = :userId AND EXISTS (SELECT b.bindId FROM Bind b "
-            + "WHERE b.elderId = s.targetId AND b.guardianId = :userId AND b.bindStatus = 1))")
+            + "WHERE b.elderId = s.targetId AND b.guardianId = :userId AND b.bindStatus = 1) "
+            + "AND EXISTS (SELECT u.id FROM User u WHERE u.id = :userId AND u.userType = 1))")
     Page<Service> findAccessibleToCustomer(@Param("userId") Integer userId, Pageable pageable);
 
     @Query("SELECT s FROM Service s WHERE (s.targetId = :userId OR "
             + "(s.creatorId = :userId AND EXISTS (SELECT b.bindId FROM Bind b "
-            + "WHERE b.elderId = s.targetId AND b.guardianId = :userId AND b.bindStatus = 1))) "
+            + "WHERE b.elderId = s.targetId AND b.guardianId = :userId AND b.bindStatus = 1) "
+            + "AND EXISTS (SELECT u.id FROM User u WHERE u.id = :userId AND u.userType = 1))) "
             + "AND s.serviceStatus IN :statuses")
     Page<Service> findVisibleByStatuses(@Param("userId") Integer userId,
                                        @Param("statuses") List<Integer> statuses, Pageable pageable);

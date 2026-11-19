@@ -174,6 +174,14 @@ class CriticalUserJourneyIntegrationTest {
         mockMvc.perform(get("/api/services/" + id).header("Authorization", guardianToken))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.address").value("解除绑定后不得再查看的住址"));
 
+        // 注册接口允许修改用户类型；活跃绑定也不能让非监护人继续按 creatorId 读取老人住址。
+        guardian.setUserType(99);
+        userRepository.saveAndFlush(guardian);
+        mockMvc.perform(get("/api/services").header("Authorization", guardianToken))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.total").value(0));
+        guardian.setUserType(1);
+        userRepository.saveAndFlush(guardian);
+
         mockMvc.perform(put("/api/bindings/%d/status".formatted(binding.getBindId()))
                         .header("Authorization", elderToken)
                         .contentType(MediaType.APPLICATION_JSON)
