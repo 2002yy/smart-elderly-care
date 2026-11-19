@@ -136,6 +136,24 @@ class ServiceControllerSecurityTest {
     }
 
     @Test
+    void creatorCannotReassignServiceTargetThroughEdit() throws Exception {
+        User requester = user(1, "creator");
+        Service service = service(10, 1, 2, 3, 0);
+        when(userService.getUserByOpenId("creator")).thenReturn(requester);
+        when(serviceService.getServiceById(10)).thenReturn(service);
+
+        mockMvc.perform(post("/api/services/update/10")
+                        .header("Authorization", bearer("creator", 0))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"targetId\":99,\"address\":\"同时修改地址\"}"))
+                .andExpect(status().isBadRequest());
+
+        verify(serviceService, never()).updateService(any(Service.class));
+        org.junit.jupiter.api.Assertions.assertEquals(2, service.getTargetId());
+        org.junit.jupiter.api.Assertions.assertNull(service.getAppointedAddress());
+    }
+
+    @Test
     void unrelatedUserCannotCancelService() throws Exception {
         User requester = user(99, "requester");
         Service service = service(10, 1, 2, 3, 0);
@@ -214,6 +232,45 @@ class ServiceControllerSecurityTest {
         org.junit.jupiter.api.Assertions.assertEquals(5, service.getServiceStatus());
         org.junit.jupiter.api.Assertions.assertEquals(5, service.getServiceEvaluationStars());
         org.junit.jupiter.api.Assertions.assertEquals("很好", service.getServiceEvaluationNotes());
+    }
+
+    @Test
+    void evaluationCannotOverrideServerControlledCompletionStatus() throws Exception {
+        User requester = user(2, "target");
+        Service service = service(10, 1, 2, 3, 4);
+        when(userService.getUserByOpenId("target")).thenReturn(requester);
+        when(serviceService.getServiceById(10)).thenReturn(service);
+
+        for (String payload : new String[]{"{\"rating\":5,\"status\":3}",
+                "{\"rating\":5,\"status\":6}", "{\"rating\":5,\"serviceStatus\":4}"}) {
+            mockMvc.perform(post("/api/services/evaluate/10")
+                            .header("Authorization", bearer("target", 0))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(payload))
+                    .andExpect(status().isBadRequest());
+        }
+
+        verify(serviceService, never()).updateService(any(Service.class));
+        org.junit.jupiter.api.Assertions.assertEquals(4, service.getServiceStatus());
+        org.junit.jupiter.api.Assertions.assertNull(service.getServiceEvaluationStars());
+    }
+
+    @Test
+    void legacyEvaluationStatusFiveStillWorks() throws Exception {
+        User requester = user(2, "target");
+        Service service = service(10, 1, 2, 3, 4);
+        when(userService.getUserByOpenId("target")).thenReturn(requester);
+        when(serviceService.getServiceById(10)).thenReturn(service);
+        when(serviceService.updateService(any(Service.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        mockMvc.perform(post("/api/services/evaluate/10")
+                        .header("Authorization", bearer("target", 0))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"serviceEvaluationStars\":5,\"status\":5}"))
+                .andExpect(status().isOk());
+
+        verify(serviceService).updateService(service);
+        org.junit.jupiter.api.Assertions.assertEquals(5, service.getServiceStatus());
     }
 
     @Test
