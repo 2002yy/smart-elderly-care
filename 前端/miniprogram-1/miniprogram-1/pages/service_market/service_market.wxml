@@ -1,0 +1,10 @@
+<view class="market-page">
+  <view class="notice">演示流程 · 员工身份未经平台资质核验。申请前仅展示服务类型和时间，订单当事人批准后才可查看住址等详情。</view>
+  <view wx:for="{{services}}" wx:key="serviceId" class="market-card">
+    <view class="service-name">{{item.typeText}}</view>
+    <view class="service-time">预约：{{item.timeText}}</view>
+    <button class="apply-btn" data-id="{{item.serviceId}}" bindtap="applyForService" disabled="{{applyingId !== null}}">申请接单</button>
+  </view>
+  <view class="hint" wx:if="{{!loading && services.length === 0}}">当前没有开放申请的服务</view>
+  <view class="hint" wx:if="{{loading}}">加载中...</view>
+</view>

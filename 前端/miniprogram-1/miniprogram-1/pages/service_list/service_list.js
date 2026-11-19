@@ -210,6 +210,10 @@ Page({
     });
   },
 
+  openServiceMarket() {
+    wx.navigateTo({ url: '/pages/service_market/service_market' });
+  },
+
   // 加载服务列表
   loadServices: function(requestedPage = 1) {
     var that = this;

@@ -61,6 +61,11 @@
     </scroll-view>
   </view>
 
+  <view wx:if="{{!isClientUser}}" class="market-entry" bindtap="openServiceMarket">
+    <text>查看可申请的服务</text>
+    <text class="market-note">申请获老人或监护人批准后，才可查看地址</text>
+  </view>
+
   <!-- 加载中提示 -->
   <view class="loading-container" wx:if="{{isLoading}}">
     <view class="loading"></view>
@@ -68,7 +73,7 @@
   </view>
 
   <!-- 服务列表 -->
-  <scroll-view scroll-y="true" class="service-scroll" bindscrolltolower="loadMore" refresher-enabled="{{true}}" refresher-triggered="{{refreshing}}" bindrefresherrefresh="onRefresh">
+  <scroll-view scroll-y="true" class="service-scroll {{isClientUser ? '' : 'worker-scroll'}}" bindscrolltolower="loadMore" refresher-enabled="{{true}}" refresher-triggered="{{refreshing}}" bindrefresherrefresh="onRefresh">
     <view class="service-list" wx:if="{{!isLoading && filteredServices.length > 0}}">
       <block wx:for="{{filteredServices}}" wx:key="id">
         <view class="service-card" bindtap="navigateToDetail" data-id="{{item.id}}">
@@ -99,7 +104,7 @@
   </scroll-view>
 
   <!-- 悬浮添加按钮 -->
-  <view class="add-btn {{addBtnActive ? 'active' : ''}}" 
+  <view wx:if="{{isClientUser}}" class="add-btn {{addBtnActive ? 'active' : ''}}"
         bindtap="onAddService" 
         bindtouchstart="onAddBtnTouchStart" 
         bindtouchend="onAddBtnTouchEnd">

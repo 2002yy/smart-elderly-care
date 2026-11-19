@@ -48,6 +48,10 @@ Page({
     showModifyBtn: false, // 是否显示修改按钮
     showPayBtn: false, // 是否显示支付按钮
     showEvaluateBtn: false, // 是否显示评价按钮
+    showApplicantsBtn: false,
+    applications: [],
+    applicationsLoaded: false,
+    approvingApplication: false,
     statusMap: {
       1: '待进行',
       2: '进行中',
@@ -286,9 +290,11 @@ Page({
     var showPayBtn = false;
     var showEvaluateBtn = false;
     var showUploadBtn = false;
+    var showApplicantsBtn = false;
     
     // 客户用户（老人或监护人）
     if (userType === 0 || userType === 1) {
+      showApplicantsBtn = status === 0;
       if (status === 0 || status === 1) {
         showModifyBtn = true; // 未指派或待进行状态可以修改
       } else if (status === 3) {
@@ -308,7 +314,56 @@ Page({
       showModifyBtn: showModifyBtn,
       showPayBtn: showPayBtn,
       showEvaluateBtn: showEvaluateBtn,
-      showUploadBtn: showUploadBtn
+      showUploadBtn: showUploadBtn,
+      showApplicantsBtn: showApplicantsBtn
+    });
+  },
+
+  // 只向订单创建者/服务对象展示申请名单。身份是自报，批准不等于资质认证。
+  loadApplications: function() {
+    var token = wx.getStorageSync('token');
+    wx.request({
+      url: app.globalData.baseUrl + '/api/services/' + this.data.serviceId + '/applications',
+      method: 'GET',
+      header: { Authorization: token },
+      success: res => {
+        if (res.statusCode === 200 && Array.isArray(res.data.data)) {
+          this.setData({ applications: res.data.data, applicationsLoaded: true });
+        } else {
+          wx.showToast({ title: '申请名单读取失败', icon: 'none' });
+        }
+      },
+      fail: () => wx.showToast({ title: '网络请求失败', icon: 'none' })
+    });
+  },
+
+  approveApplication: function(e) {
+    if (this.data.approvingApplication) return;
+    var applicationId = Number(e.currentTarget.dataset.id);
+    wx.showModal({
+      title: '确认批准接单',
+      content: '此操作会让该申请者看到老人姓名、预约住址等订单详情。员工身份目前未经平台资质核验，确定批准吗？',
+      success: result => {
+        if (!result.confirm) return;
+        this.setData({ approvingApplication: true });
+        wx.request({
+          url: app.globalData.baseUrl + '/api/services/' + this.data.serviceId
+            + '/applications/' + applicationId + '/approve',
+          method: 'POST',
+          header: { Authorization: wx.getStorageSync('token') },
+          success: res => {
+            if (res.statusCode === 200) {
+              wx.showToast({ title: '已批准接单', icon: 'success' });
+              this.setData({ applications: [], applicationsLoaded: false });
+              this.fetchServiceFromServer(this.data.serviceId);
+            } else {
+              wx.showToast({ title: '批准失败，订单可能已分配', icon: 'none' });
+            }
+          },
+          fail: () => wx.showToast({ title: '网络请求失败', icon: 'none' }),
+          complete: () => this.setData({ approvingApplication: false })
+        });
+      }
     });
   },
   

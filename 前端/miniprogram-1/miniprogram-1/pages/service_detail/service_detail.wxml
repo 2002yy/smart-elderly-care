@@ -64,6 +64,16 @@
     </view>
   </view>
 
+  <view wx:if="{{showApplicantsBtn}}" class="application-panel">
+    <view class="application-warning">申请者是自行登记的服务人员，平台尚未核验资质。批准后将向其开放服务地址与老人信息。</view>
+    <button class="action-btn" bindtap="loadApplications">查看接单申请</button>
+    <view wx:if="{{applicationsLoaded && applications.length === 0}}" class="application-empty">尚无人申请</view>
+    <view wx:for="{{applications}}" wx:key="applicationId" class="application-row">
+      <text>{{item.name}} · {{item.status === 0 ? '待批准' : (item.status === 1 ? '已批准' : '未获批准')}}</text>
+      <button wx:if="{{item.status === 0}}" size="mini" bindtap="approveApplication" data-id="{{item.applicationId}}" disabled="{{approvingApplication}}">批准</button>
+    </view>
+  </view>
+
   <!-- 底部按钮区域 -->
   <view class="button-area">
     <!-- 修改服务按钮 - 老人/监护人 & 待进行状态 -->
@@ -103,7 +113,7 @@
     </button>
 
     <!-- 删除服务按钮 (原取消按钮) -->
-    <button class="action-btn cancel-btn" wx:if="{{serviceData.status === 0 || serviceData.status === 1}}" bindtap="onCancelService">
+    <button class="action-btn cancel-btn" wx:if="{{(userType === 0 || userType === 1) && (serviceData.status === 0 || serviceData.status === 1)}}" bindtap="onCancelService">
       删除服务
     </button>
   </view>
