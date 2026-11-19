@@ -116,10 +116,10 @@ public class LoginController {
 
             List<Map<String, Object>> bindInfo = rawBinds.stream().map(bind -> {
                 Map<String, Object> bindingMap = new HashMap<>();
-                User partner = userService.getUserById(
-                        currentUser.getUserType() == 0 ? bind.getGuardianId() : bind.getElderId()
-                );
+                Integer partnerId = currentUser.getUserType() == 0 ? bind.getGuardianId() : bind.getElderId();
+                User partner = userService.getUserById(partnerId);
                 bindingMap.put("id", bind.getBindId());
+                bindingMap.put("partnerId", partnerId);
                 bindingMap.put("bind_status", bind.getBindStatus());
                 if (partner != null) {
                     bindingMap.put("name", partner.getNickname());

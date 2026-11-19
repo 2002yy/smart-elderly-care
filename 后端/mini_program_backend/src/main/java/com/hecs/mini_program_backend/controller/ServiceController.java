@@ -2,6 +2,7 @@ package com.hecs.mini_program_backend.controller;
 
 import com.hecs.mini_program_backend.entity.Service;
 import com.hecs.mini_program_backend.entity.User;
+import com.hecs.mini_program_backend.service.BindService;
 import com.hecs.mini_program_backend.service.ServiceService;
 import com.hecs.mini_program_backend.service.UserService;
 import com.hecs.mini_program_backend.utils.TokenParse;
@@ -31,6 +32,23 @@ public class ServiceController {
 
     @Autowired
     private UserService userService;
+
+    @Autowired
+    private BindService bindService;
+
+    private boolean canCreateServiceFor(User user, Integer targetId) {
+        if (user.getId() == null || user.getUserType() == null || targetId == null) {
+            return false;
+        }
+        if (user.getUserType() == 0) {
+            return user.getId().equals(targetId); // 老人只能为自己预约
+        }
+        if (user.getUserType() == 1) {
+            return bindService.getBindingsByElderAndGuardianId(targetId, user.getId()).stream()
+                    .anyMatch(bind -> Integer.valueOf(1).equals(bind.getBindStatus()));
+        }
+        return false;
+    }
 
     private boolean isServiceEditor(Service service, User user) {
         if (user == null || user.getId() == null) {
@@ -224,7 +242,12 @@ public class ServiceController {
             Service service = new Service();
             try {
                 service.setServiceType(Integer.parseInt(body.get("type").toString()));
-                service.setTargetId(Integer.parseInt(body.get("targetId").toString()));
+                Integer targetId = Integer.parseInt(body.get("targetId").toString());
+                if (!canCreateServiceFor(user, targetId)) {
+                    return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                            .body(Map.of("message", "只能为自己或已确认绑定的老人预约服务"));
+                }
+                service.setTargetId(targetId);
                 service.setScheduledTime(Instant.parse(body.get("scheduledTime").toString()));
                 service.setAppointedAddress(body.get("address").toString());
 

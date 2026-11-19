@@ -2,6 +2,8 @@ package com.hecs.mini_program_backend.controller;
 
 import com.hecs.mini_program_backend.entity.Service;
 import com.hecs.mini_program_backend.entity.User;
+import com.hecs.mini_program_backend.entity.Bind;
+import com.hecs.mini_program_backend.mapper.BindRepository;
 import com.hecs.mini_program_backend.mapper.ServiceRepository;
 import com.hecs.mini_program_backend.mapper.UserRepository;
 import com.hecs.mini_program_backend.utils.TokenGenerate;
@@ -18,6 +20,7 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -35,12 +38,39 @@ class CriticalUserJourneyIntegrationTest {
     @Autowired
     private ServiceRepository serviceRepository;
 
+    @Autowired
+    private BindRepository bindRepository;
+
     @Test
     void frontendServiceCreationPersistsAndReturnsThroughListApi() throws Exception {
         User creator = saveUser("ci-creator", 1, "测试监护人");
         User target = saveUser("ci-target", 0, "测试老人");
+        target.setPhoneNumber("13900000001");
+        userRepository.saveAndFlush(target);
         User provider = saveUser("ci-provider", 2, "测试服务员");
         String authorization = "Bearer " + new TokenGenerate().TokenGenerate(creator.getOpenId(), creator.getUserType());
+
+        // 真正的预约必须先由老人确认监护人绑定；申请本身不应自动生效。
+        mockMvc.perform(post("/api/bindings/create")
+                        .header("Authorization", authorization)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"target_phone\":\"13900000001\"}"))
+                .andExpect(status().isCreated());
+        Bind binding = bindRepository.findByElderIdAndGuardianId(target.getId(), creator.getId()).get(0);
+        assertThat(binding.getBindStatus()).isEqualTo(0);
+
+        mockMvc.perform(get("/api/bindings")
+                        .header("Authorization", authorization))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data[0].id").value(binding.getBindId()))
+                .andExpect(jsonPath("$.data[0].partnerId").value(target.getId()));
+
+        mockMvc.perform(put("/api/bindings/%d/status".formatted(binding.getBindId()))
+                        .header("Authorization", "Bearer " + new TokenGenerate().TokenGenerate(
+                                target.getOpenId(), target.getUserType()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"bind_status\":1}"))
+                .andExpect(status().isOk());
 
         mockMvc.perform(post("/api/services/create")
                         .header("Authorization", authorization)
@@ -79,6 +109,30 @@ class CriticalUserJourneyIntegrationTest {
                 .andExpect(jsonPath("$.total").value(1))
                 .andExpect(jsonPath("$.data[0].serviceId").value(service.getServiceId()))
                 .andExpect(jsonPath("$.data[0].address").value("CI养老服务中心"));
+    }
+
+    @Test
+    void unconfirmedGuardianCannotBookForElder() throws Exception {
+        User guardian = saveUser("ci-unconfirmed-guardian", 1, "未获授权的监护人");
+        User elder = saveUser("ci-unconfirmed-elder", 0, "未同意的老人");
+        Bind pending = new Bind();
+        pending.setGuardianId(guardian.getId());
+        pending.setElderId(elder.getId());
+        pending.setInitiatorId(guardian.getId());
+        pending.setBindStatus(0);
+        bindRepository.saveAndFlush(pending);
+
+        mockMvc.perform(post("/api/services/create")
+                        .header("Authorization", "Bearer " + new TokenGenerate().TokenGenerate(
+                                guardian.getOpenId(), guardian.getUserType()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"targetId":%d,"type":1,"scheduledTime":"2030-01-02T03:04:05Z",
+                                 "address":"不能代他人预约"}
+                                """.formatted(elder.getId())))
+                .andExpect(status().isForbidden());
+
+        assertThat(serviceRepository.findAll()).isEmpty();
     }
 
     @Test

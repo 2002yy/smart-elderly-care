@@ -37,7 +37,6 @@ public class BindServiceImpl implements BindService {
     public Bind createBind(Bind bind) {
         bind.setCreateTime(Instant.now());
         bind.setUpdateTime(Instant.now());
-        bind.setBindStatus(1); // 待确认状态
         return bindRepository.save(bind);
     }
     
