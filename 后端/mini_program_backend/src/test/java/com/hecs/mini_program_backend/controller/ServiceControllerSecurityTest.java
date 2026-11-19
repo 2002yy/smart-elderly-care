@@ -73,6 +73,7 @@ class ServiceControllerSecurityTest {
     @Test
     void assignedProviderCanReadServiceDetail() throws Exception {
         User requester = user(3, "provider");
+        requester.setUserType(2);
         Service service = service(10, 1, 2, 3, 0);
         when(userService.getUserByOpenId("provider")).thenReturn(requester);
         when(serviceService.getServiceById(10)).thenReturn(service);
@@ -81,6 +82,36 @@ class ServiceControllerSecurityTest {
                         .header("Authorization", bearer("provider", 2)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.serviceId").value(10));
+    }
+
+    @Test
+    void unassignedProviderSentinelNeverGrantsDetailAccess() throws Exception {
+        User requester = user(0, "not-assigned");
+        requester.setUserType(2);
+        Service service = service(10, 1, 2, 0, 0);
+        when(userService.getUserByOpenId("not-assigned")).thenReturn(requester);
+        when(serviceService.getServiceById(10)).thenReturn(service);
+
+        mockMvc.perform(get("/api/services/10")
+                        .header("Authorization", bearer("not-assigned", 2)))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void customerCannotSupplyProviderIdWhenCreatingService() throws Exception {
+        User requester = user(1, "creator");
+        when(userService.getUserByOpenId("creator")).thenReturn(requester);
+
+        mockMvc.perform(post("/api/services/create")
+                        .header("Authorization", bearer("creator", 0))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"targetId":1,"providerId":5,"type":1,
+                                 "scheduledTime":"2030-01-02T03:04:05Z","address":"老人家庭地址"}
+                                """))
+                .andExpect(status().isBadRequest());
+
+        verify(serviceService, never()).createService(any(Service.class));
     }
 
     @Test

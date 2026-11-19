@@ -26,6 +26,8 @@ import java.util.Map;
 @RequestMapping("/api/services")
 public class ServiceController {
     private static final Logger logger = LoggerFactory.getLogger(ServiceController.class);
+    // 现有数据库 provider_id 不可为空；0 明确表示尚无真实派单，不能授权读取订单。
+    private static final Integer UNASSIGNED_PROVIDER_ID = 0;
 
     @Autowired
     private ServiceService serviceService;
@@ -61,7 +63,9 @@ public class ServiceController {
 
     private boolean isServiceParticipant(Service service, User user) {
         return isServiceEditor(service, user)
-                || (user != null && user.getId() != null && user.getId().equals(service.getProviderId()));
+                || (user != null && user.getId() != null && Integer.valueOf(2).equals(user.getUserType())
+                && service.getProviderId() != null && service.getProviderId() > 0
+                && user.getId().equals(service.getProviderId()));
     }
 
     private Map<String, Object> createServiceResponseMap(Service service) {
@@ -93,7 +97,7 @@ public class ServiceController {
                 creator = userService.getUserById(service.getCreatorId());
             }
             
-            if (service.getProviderId() != null) {
+            if (service.getProviderId() != null && service.getProviderId() > 0) {
                 provider = userService.getUserById(service.getProviderId());
             }
 
@@ -238,6 +242,10 @@ public class ServiceController {
                 logger.warn("Missing address in service creation request");
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", "服务地址不能为空"));
             }
+            if (body.containsKey("providerId")) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("message", "服务人员由服务端派单，预约时不能指定"));
+            }
 
             Service service = new Service();
             try {
@@ -257,15 +265,8 @@ public class ServiceController {
 
                 service.setCreatorId(user.getId());
                 
-                // Set a default providerId to avoid NOT NULL constraint violation
-                if (body.containsKey("providerId")) {
-                    service.setProviderId(Integer.parseInt(body.get("providerId").toString()));
-                } else {
-                    // Use a default value or assign based on service type
-                    // For now, we'll use the system admin ID (assuming ID 1 is admin)
-                    // This should be replaced with proper provider assignment logic
-                    service.setProviderId(1);
-                }
+                // 未实现真实指派：不得把 ID 1、5 或客户传入的 ID 冒充已分配服务人员。
+                service.setProviderId(UNASSIGNED_PROVIDER_ID);
                 
                 logger.info("Creating service: type={}, targetId={}, creatorId={}, providerId={}", 
                            service.getServiceType(), service.getTargetId(), service.getCreatorId(), service.getProviderId());

@@ -185,7 +185,7 @@
 | creatorName      | string | 创建者姓名                                               |
 | targetId         | string | 服务对象ID                                               |
 | targetName       | string | 服务对象姓名                                             |
-| providerId       | string | 服务提供者ID                                             |
+| providerId       | number | 服务提供者ID；0 表示未派单                           |
 | providerName     | string | 服务提供者姓名                                           |
 | scheduledTime    | string | 预约时间                                                 |
 | appointedAddress | string | 服务地址                                                 |
@@ -193,7 +193,8 @@
 | createTime       | string | 创建时间                                                 |
 | updateTime       | string | 更新时间                                                 |
 
-备注：当数据库中服务对象为0时表明该服务还未被管理员指派给某一个服务人员，该服务在前端可以与状态为1的服务放在一起，但是服务提供者姓名显示“未指派”
+备注：`providerId=0` 表示尚未指派服务人员，不代表某个真实用户；新建预约时客户端不能指定 `providerId`。
+当前服务端尚无真实派单/接单入口，状态为 0 的订单不应展示为已接单。
 
 此外，targetName和providerName需要通过各自的id查找user表获得
 
@@ -237,8 +238,8 @@
 
 | 参数名        | 类型   | 必填 | 描述                                         |
 | ------------- | ------ | ---- | -------------------------------------------- |
-| type          | string | 是   | 服务类型('生活照料', '医疗护理', '心理护理') |
-| targetId      | string | 是   | 服务对象ID                                   |
+| type          | number | 是   | 服务类型编号（0 生活照料、1 医疗护理、2 心理护理） |
+| targetId      | number | 是   | 服务对象用户 ID（须为本人或已确认绑定的老人） |
 | scheduledTime | string | 是   | 预约时间                                     |
 | address       | string | 是   | 服务地址                                     |
 | remark        | string | 否   | 备注                                         |
@@ -249,7 +250,7 @@
 | --------- | ------- | ------------ |
 | success   | boolean | 是否成功     |
 | message   | string  | 提示信息     |
-| serviceId | string  | 创建的服务ID |
+| service   | object  | 创建的服务详情（含 serviceId，providerId=0） |
 
 ### 更新服务
 
