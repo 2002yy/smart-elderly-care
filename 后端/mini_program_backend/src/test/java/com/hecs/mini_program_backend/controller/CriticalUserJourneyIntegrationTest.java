@@ -182,7 +182,7 @@ class CriticalUserJourneyIntegrationTest {
     }
 
     @Test
-    void declaredWorkerMustApplyAndGetCustomerApprovalBeforeReadingPrivateDetails() throws Exception {
+    void consentGatedWorkerApplicationAndTwoPartyCompletionFlow() throws Exception {
         User elder = saveUser("ci-applicant-elder", 0, "接单测试老人");
         User chosenWorker = saveUser("ci-chosen-worker", 2, "甲员工（自报）");
         User otherWorker = saveUser("ci-other-worker", 3, "乙员工（自报）");
@@ -262,6 +262,76 @@ class CriticalUserJourneyIntegrationTest {
         mockMvc.perform(post("/api/services/" + id + "/applications/" + chosenApplicationId + "/approve")
                         .header("Authorization", elderToken))
                 .andExpect(status().isConflict());
+
+        // 未批准的员工不能操作履约；批准后仍不能跳过开始和完工申请。
+        mockMvc.perform(post("/api/services/" + id + "/start").header("Authorization", otherToken))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(post("/api/services/" + id + "/confirm-completion")
+                        .header("Authorization", elderToken))
+                .andExpect(status().isConflict());
+        mockMvc.perform(post("/api/services/" + id + "/request-completion")
+                        .header("Authorization", chosenToken))
+                .andExpect(status().isConflict());
+
+        mockMvc.perform(post("/api/services/" + id + "/start").header("Authorization", chosenToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value(2))
+                .andExpect(jsonPath("$.startedAt").exists());
+        mockMvc.perform(post("/api/services/" + id + "/start").header("Authorization", chosenToken))
+                .andExpect(status().isConflict());
+        mockMvc.perform(post("/api/services/cancel/" + id).header("Authorization", elderToken))
+                .andExpect(status().isConflict());
+
+        mockMvc.perform(post("/api/services/" + id + "/request-completion")
+                        .header("Authorization", chosenToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value(2))
+                .andExpect(jsonPath("$.requestedAt").exists());
+        mockMvc.perform(post("/api/services/" + id + "/request-completion")
+                        .header("Authorization", chosenToken))
+                .andExpect(status().isConflict());
+        mockMvc.perform(post("/api/services/" + id + "/confirm-completion")
+                        .header("Authorization", otherToken))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(post("/api/services/" + id + "/confirm-completion")
+                        .header("Authorization", elderToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value(3))
+                .andExpect(jsonPath("$.confirmedAt").exists());
+        mockMvc.perform(get("/api/services/" + id).header("Authorization", elderToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.completionConfirmedBy").value(elder.getId()));
+        mockMvc.perform(get("/api/services").header("Authorization", chosenToken).param("status", "3"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.total").value(1));
+        mockMvc.perform(post("/api/services/payment/" + id).header("Authorization", elderToken))
+                .andExpect(status().isNotImplemented());
+        assertThat(serviceRepository.findById(id).orElseThrow().getServiceStatus()).isEqualTo(3);
+    }
+
+    @Test
+    void cancellingPendingServiceRemovesApplicationsWithoutLeavingOrphans() throws Exception {
+        User elder = saveUser("ci-cancel-elder", 0, "取消测试老人");
+        User worker = saveUser("ci-cancel-worker", 4, "自报员工");
+        Service service = new Service();
+        service.setCreatorId(elder.getId());
+        service.setTargetId(elder.getId());
+        service.setProviderId(0);
+        service.setServiceType(0);
+        service.setServiceStatus(0);
+        int id = serviceRepository.saveAndFlush(service).getServiceId();
+        String workerToken = "Bearer " + new TokenGenerate().TokenGenerate(worker.getOpenId(), worker.getUserType());
+        String elderToken = "Bearer " + new TokenGenerate().TokenGenerate(elder.getOpenId(), elder.getUserType());
+
+        mockMvc.perform(post("/api/services/" + id + "/apply").header("Authorization", workerToken))
+                .andExpect(status().isCreated());
+        mockMvc.perform(post("/api/services/cancel/" + id).header("Authorization", elderToken))
+                .andExpect(status().isOk());
+        assertThat(serviceRepository.findById(id)).isEmpty();
+        assertThat(applicationRepository.findByServiceIdOrderByApplicationIdAsc(id)).isEmpty();
+        mockMvc.perform(post("/api/services/" + id + "/start").header("Authorization", workerToken))
+                .andExpect(status().isNotFound());
     }
 
     @Test

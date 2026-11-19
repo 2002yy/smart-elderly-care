@@ -4,6 +4,7 @@ import com.hecs.mini_program_backend.entity.Service;
 import com.hecs.mini_program_backend.entity.User;
 import com.hecs.mini_program_backend.service.ServiceService;
 import com.hecs.mini_program_backend.service.ServiceApplicationService;
+import com.hecs.mini_program_backend.service.ServiceFulfillmentService;
 import com.hecs.mini_program_backend.service.UserService;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
@@ -35,6 +36,7 @@ class ServiceControllerSecurityTest {
 
     private ServiceService serviceService;
     private ServiceApplicationService applicationService;
+    private ServiceFulfillmentService fulfillmentService;
     private UserService userService;
     private MockMvc mockMvc;
 
@@ -42,11 +44,13 @@ class ServiceControllerSecurityTest {
     void setUp() {
         serviceService = mock(ServiceService.class);
         applicationService = mock(ServiceApplicationService.class);
+        fulfillmentService = mock(ServiceFulfillmentService.class);
         userService = mock(UserService.class);
 
         ServiceController controller = new ServiceController();
         ReflectionTestUtils.setField(controller, "serviceService", serviceService);
         ReflectionTestUtils.setField(controller, "applicationService", applicationService);
+        ReflectionTestUtils.setField(controller, "fulfillmentService", fulfillmentService);
         ReflectionTestUtils.setField(controller, "userService", userService);
 
         when(applicationService.isDeclaredWorker(any(User.class))).thenAnswer(invocation -> {
@@ -222,7 +226,7 @@ class ServiceControllerSecurityTest {
                         .header("Authorization", bearer("requester", 0)))
                 .andExpect(status().isForbidden());
 
-        verify(serviceService, never()).deleteService(10);
+        verify(fulfillmentService, never()).cancelService(10, requester);
     }
 
     @Test
@@ -236,7 +240,7 @@ class ServiceControllerSecurityTest {
                         .header("Authorization", bearer("creator", 0)))
                 .andExpect(status().isOk());
 
-        verify(serviceService).deleteService(10);
+        verify(fulfillmentService).cancelService(10, requester);
     }
 
     @Test
@@ -253,7 +257,7 @@ class ServiceControllerSecurityTest {
                     .andExpect(status().isConflict());
         }
 
-        verify(serviceService, never()).deleteService(10);
+        verify(fulfillmentService, never()).cancelService(10, requester);
     }
 
     @Test

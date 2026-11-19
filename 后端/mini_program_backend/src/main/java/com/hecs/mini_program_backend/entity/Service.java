@@ -51,6 +51,19 @@ public class Service {
     @Column(name = "appointed_address")
     private String appointedAddress;
 
+    // 演示履约声明：这些时间只证明谁在系统中做了什么，不代表线下到场验真。
+    @Column(name = "service_started_at")
+    private Instant serviceStartedAt;
+
+    @Column(name = "completion_requested_at")
+    private Instant completionRequestedAt;
+
+    @Column(name = "completion_confirmed_at")
+    private Instant completionConfirmedAt;
+
+    @Column(name = "completion_confirmed_by")
+    private Integer completionConfirmedBy;
+
     @CreationTimestamp
     @Column(name = "create_time", updatable = false)
     private Instant createTime;

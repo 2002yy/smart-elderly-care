@@ -4,6 +4,7 @@ import com.hecs.mini_program_backend.entity.Service;
 import com.hecs.mini_program_backend.entity.User;
 import com.hecs.mini_program_backend.service.BindService;
 import com.hecs.mini_program_backend.service.ServiceApplicationService;
+import com.hecs.mini_program_backend.service.ServiceFulfillmentService;
 import com.hecs.mini_program_backend.service.ServiceService;
 import com.hecs.mini_program_backend.service.UserService;
 import com.hecs.mini_program_backend.utils.TokenParse;
@@ -18,6 +19,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
 import java.util.HashMap;
@@ -42,6 +44,9 @@ public class ServiceController {
 
     @Autowired
     private ServiceApplicationService applicationService;
+
+    @Autowired
+    private ServiceFulfillmentService fulfillmentService;
 
     private boolean canCreateServiceFor(User user, Integer targetId) {
         if (user.getId() == null || user.getUserType() == null || targetId == null) {
@@ -90,6 +95,10 @@ public class ServiceController {
             serviceMap.put("status", service.getServiceStatus());
             serviceMap.put("createTime", service.getCreateTime());
             serviceMap.put("updateTime", service.getUpdateTime());
+            serviceMap.put("serviceStartedAt", service.getServiceStartedAt());
+            serviceMap.put("completionRequestedAt", service.getCompletionRequestedAt());
+            serviceMap.put("completionConfirmedAt", service.getCompletionConfirmedAt());
+            serviceMap.put("completionConfirmedBy", service.getCompletionConfirmedBy());
             
             User target = null;
             User creator = null;
@@ -424,7 +433,7 @@ public class ServiceController {
             }
             
             // 删除服务
-            serviceService.deleteService(id);
+            fulfillmentService.cancelService(id, user);
             
             // 返回结果
             Map<String, Object> response = new HashMap<>();
@@ -434,6 +443,8 @@ public class ServiceController {
             return ResponseEntity.ok(response);
         } catch (JwtException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("无效的token");
+        } catch (ResponseStatusException e) {
+            return ResponseEntity.status(e.getStatusCode()).body(e.getReason());
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("取消服务失败: " + e.getMessage());
         }
