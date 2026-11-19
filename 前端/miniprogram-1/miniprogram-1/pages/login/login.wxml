@@ -10,7 +10,7 @@
 
   <!-- 登录按钮区域 -->
   <view class="btn-container">
-    <button class="wechat-btn" open-type="getUserInfo" bindgetuserinfo="handleWechatLogin">
+    <button class="wechat-btn" bindtap="handleWechatLogin" disabled="{{isLoading}}" loading="{{isLoading}}">
       微信登录
     </button>
   </view>

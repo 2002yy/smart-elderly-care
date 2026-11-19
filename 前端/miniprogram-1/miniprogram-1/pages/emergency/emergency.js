@@ -50,7 +50,7 @@ Page({
     
     // 获取全局配置中的baseUrl
     const app = getApp();
-    const baseUrl = app.globalData.baseUrl || 'http://localhost:8081';
+    const baseUrl = app.globalData.baseUrl;
     
     wx.request({
       url: `${baseUrl}/api/emergency/info`,
@@ -169,7 +169,7 @@ Page({
     
     // 获取全局配置中的baseUrl
     const app = getApp();
-    const baseUrl = app.globalData.baseUrl || 'http://localhost:8081';
+    const baseUrl = app.globalData.baseUrl;
     
     // 发送到后端
     wx.request({
@@ -221,4 +221,4 @@ Page({
       }
     });
   }
-}); 
+});

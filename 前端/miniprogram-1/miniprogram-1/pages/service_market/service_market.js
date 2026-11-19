@@ -1,4 +1,5 @@
 const app = getApp();
+const { formatBeijingTime } = require('../../utils/serviceTime.js');
 
 Page({
   data: {
@@ -49,7 +50,7 @@ Page({
         const incoming = res.data.data.map(item => ({
           serviceId: item.serviceId,
           typeText: ['生活照料', '医疗护理', '心理护理'][item.type] || '其他服务',
-          timeText: item.scheduledTime ? item.scheduledTime.replace('T', ' ').slice(0, 16) + ' (UTC)' : '时间待定'
+          timeText: item.scheduledTime ? formatBeijingTime(item.scheduledTime, true) + '（北京时间）' : '时间待定'
         }));
         this.setData({
           services: page === 1 ? incoming : this.data.services.concat(incoming),

@@ -1,30 +1,17 @@
 var app = getApp();
+const { beijingCalendarDay, beijingClock, beijingWallTimeToIso, formatBeijingTime } = require('../../utils/serviceTime.js');
 
 // 补零函数，替代padStart
 function padZero(num) {
   return num < 10 ? '0' + num : '' + num;
 }
 
-// 将本地时间转换为UTC时间的ISO字符串
-function convertToUTCTime(dateStr) {
-  const date = new Date(dateStr);
-  console.log('原始日期字符串:', dateStr);
-  console.log('解析后的本地日期对象:', date.toString());
-  
-  // 将本地时间转换为UTC时间，需要减去8小时
-  const utcDate = new Date(date.getTime() - 8 * 60 * 60 * 1000);
-  console.log('转换为UTC的日期对象:', utcDate.toString());
-  console.log('转换为ISO字符串:', utcDate.toISOString());
-  
-  return utcDate.toISOString();
-}
-
 // 获取从当前时间开始的时间段
 function getAvailableTimes(isToday) {
   const times = [];
-  const now = new Date();
-  const startHour = isToday ? now.getHours() : 8;
-  const startMinute = isToday ? now.getMinutes() : 0;
+  const now = beijingClock();
+  const startHour = isToday ? now.hour : 8;
+  const startMinute = isToday ? now.minute : 0;
 
   for (let h = startHour; h < 21; h++) { // 服务时间到晚上8点
     for (let m = 0; m < 60; m += 30) {
@@ -64,9 +51,8 @@ Page({
       (function() {
         var dateArr = [];
         for (var i = 0; i < 7; i++) {
-          var date = new Date();
-          date.setDate(date.getDate() + i);
-          dateArr.push((date.getMonth() + 1) + '月' + date.getDate() + '日');
+          var date = beijingCalendarDay(i);
+          dateArr.push(date.month + '月' + date.date + '日');
         }
         return dateArr;
       })(),
@@ -135,8 +121,6 @@ Page({
     var targetNames = [];
     
     console.log('初始化服务对象列表，用户类型:', userType);
-    console.log('用户信息:', userInfo);
-    console.log('绑定信息:', bindings);
     
     // 如果是老人用户(userType=0)，可以选择自己
     if (userType === 0) {
@@ -189,7 +173,6 @@ Page({
       wx.showToast({ title: '绑定信息已过期，请重新登录', icon: 'none' });
     }
     
-    console.log('初始化后的服务对象列表:', targets);
     
     this.setData({
       serviceTargets: targets,
@@ -203,13 +186,11 @@ Page({
     var service = null;
     
     console.log('正在加载服务详情，ID:', serviceId);
-    console.log('缓存中的服务列表:', cachedServices);
     
     // 从缓存中查找服务
     for (var i = 0; i < cachedServices.length; i++) {
       if (cachedServices[i].id === serviceId || cachedServices[i].serviceId === serviceId) {
         service = cachedServices[i];
-        console.log('找到匹配的服务:', service);
         break;
       }
     }
@@ -238,32 +219,29 @@ Page({
       if (scheduledTime) {
         // 尝试解析日期和时间
         try {
-          var dateObj = new Date(scheduledTime);
-          // 将UTC时间转换为北京时间
-          dateObj = new Date(dateObj.getTime() + 8 * 60 * 60 * 1000);
+          var localScheduledTime = formatBeijingTime(scheduledTime, true);
+          var scheduledDay = localScheduledTime.slice(0, 10);
+          var timeString = localScheduledTime.slice(11);
           
           // 找到日期索引
           for (var i = 0; i < 7; i++) {
-            var compareDate = new Date();
-            compareDate.setDate(compareDate.getDate() + i);
-            
-            if (dateObj.getDate() === compareDate.getDate() && 
-                dateObj.getMonth() === compareDate.getMonth()) {
+            var compareDate = beijingCalendarDay(i);
+            var comparedDay = `${compareDate.year}-${padZero(compareDate.month)}-${padZero(compareDate.date)}`;
+            if (scheduledDay === comparedDay) {
               timeIndex[0] = i;
               break;
             }
           }
           
           // 找到时间索引
-          var hours = dateObj.getHours();
-          var minutes = dateObj.getMinutes();
-          var timeString = padZero(hours) + ':' + padZero(minutes);
+          var availableTimes = getAvailableTimes(timeIndex[0] === 0);
+          this.setData({ 'timeRange[1]': availableTimes });
           
           console.log('解析的时间:', timeString);
           console.log('可用时间列表:', this.data.timeRange[1]);
           
-          for (var i = 0; i < this.data.timeRange[1].length; i++) {
-            if (this.data.timeRange[1][i] === timeString) {
+          for (var i = 0; i < availableTimes.length; i++) {
+            if (availableTimes[i] === timeString) {
               timeIndex[1] = i;
               break;
             }
@@ -284,7 +262,6 @@ Page({
         targetId: service.targetId || ''
       };
       
-      console.log('设置表单数据:', formData);
       
       // 对于编辑模式，我们需要设置isoScheduledTime，这样在提交时可以使用
       // 如果我们有原始的scheduledTime，就将其转换为UTC时间的ISO字符串
@@ -356,8 +333,6 @@ Page({
       success: function(res) {
         wx.hideLoading();
         
-        console.log('服务详情API响应:', res);
-        console.log('服务详情数据:', res.data);
         
         if (res.statusCode === 200 && res.data) {
           var service = res.data; // 直接使用res.data，不需要res.data.service
@@ -395,7 +370,6 @@ Page({
             service.serviceDes = service.remark;
           }
           
-          console.log('处理后的服务数据:', service);
           
           // 将获取的服务添加到缓存
           var cachedServices = wx.getStorageSync('serviceInfo') || [];
@@ -505,7 +479,6 @@ Page({
     
     if (value >= 0 && value < this.data.serviceTargets.length) {
       var targetId = this.data.serviceTargets[value].id;
-      console.log('选择的服务对象:', this.data.serviceTargets[value]);
       console.log('服务对象ID:', targetId, '类型:', typeof targetId);
       
       // 确保targetId是字符串类型
@@ -527,11 +500,11 @@ Page({
     var datePart = this.data.timeRange[0][val[0]];
     var timePart = this.data.timeRange[1][val[1]];
 
-    // 重新获取当前年份
-    var year = new Date().getFullYear();
-    // 注意：这里的月份和日期解析需要健壮，因为它依赖于 'M月d日' 格式
-    var month = parseInt(datePart.split('月')[0]);
-    var day = parseInt(datePart.split('月')[1].replace('日', ''));
+    // 使用北京时间的日历日，避免跨年时仍把 1 月预约算成上一年。
+    var selectedDay = beijingCalendarDay(Number(val[0]));
+    var year = selectedDay.year;
+    var month = selectedDay.month;
+    var day = selectedDay.date;
 
     if (!timePart || timePart.includes('今日已无可预约时间')) {
       wx.showToast({
@@ -555,7 +528,7 @@ Page({
     // 存储一个ISO格式的时间，用于后续提交给后端
     try {
       // 转换为ISO格式的UTC时间
-      var isoTime = convertToUTCTime(scheduledTimeStr);
+      var isoTime = beijingWallTimeToIso(scheduledTimeStr);
       console.log('转换后的ISO格式UTC时间:', isoTime);
       
       this.setData({
@@ -679,12 +652,9 @@ Page({
       dataToSend.targetId = String(targetId || ''); // 转换为字符串，确保非空
     }
 
-    console.log('发送的数据:', dataToSend);
     console.log('数据类型检查:');
     console.log('- type:', typeof dataToSend.type, dataToSend.type);
     console.log('- scheduledTime:', typeof dataToSend.scheduledTime, dataToSend.scheduledTime);
-    console.log('- address:', typeof dataToSend.address, dataToSend.address);
-    console.log('- remark:', typeof dataToSend.remark, dataToSend.remark);
     if (!this.data.isEdit) {
       console.log('- targetId:', typeof dataToSend.targetId, dataToSend.targetId);
     }
@@ -698,7 +668,6 @@ Page({
       },
       data: dataToSend,
       success: (res) => {
-        console.log('服务提交响应:', res);
         
         if (res.statusCode === 200 || res.statusCode === 201) {
           wx.showToast({
@@ -805,7 +774,6 @@ Page({
       
       // 更新缓存
       wx.setStorageSync('serviceInfo', cachedServices);
-      console.log('已更新服务缓存:', cachedServices);
     } catch (error) {
       console.error('更新服务缓存失败:', error);
     }

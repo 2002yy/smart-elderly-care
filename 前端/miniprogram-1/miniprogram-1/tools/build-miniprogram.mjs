@@ -1,5 +1,5 @@
 import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
-import { basename, dirname, join, relative } from "node:path";
+import { basename, dirname, join, relative, sep } from "node:path";
 import { spawnSync } from "node:child_process";
 
 const root = process.cwd();
@@ -63,6 +63,14 @@ for (const file of sourceFiles.filter((item) => item.endsWith(".js"))) {
   const result = spawnSync(process.execPath, ["--check", file], { encoding: "utf8" });
   if (result.status !== 0) {
     throw new Error(`JavaScript syntax error in ${relative(root, file)}:\n${result.stderr}`);
+  }
+}
+
+// 发布包通过 config.js 注入 API 基址，页面不能绕过它指向开发者自己的 localhost。
+const localEndpointPattern = /https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?\/(login|api\/)/;
+for (const file of sourceFiles.filter((item) => item.startsWith(join(root, "pages") + sep) && item.endsWith(".js"))) {
+  if (localEndpointPattern.test(readFileSync(file, "utf8"))) {
+    throw new Error(`Page hard-codes a local API URL: ${relative(root, file)}`);
   }
 }
 

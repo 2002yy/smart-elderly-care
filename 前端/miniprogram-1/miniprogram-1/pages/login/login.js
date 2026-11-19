@@ -17,6 +17,7 @@ Page({
    * 3. 如果未授权，显示提示信息
    */
   handleWechatLogin(e) {
+    if (this.data.isLoading) return;
     // 微信新版本不再返回userInfo，直接进行登录
     this.setData({ isLoading: true });
     
@@ -30,17 +31,14 @@ Page({
         } else {
           console.error('登录失败', res.errMsg);
           this.showError('获取登录凭证失败，请重试');
+          this.setData({ isLoading: false });
         }
       },
       fail: (res) => {
         // 登录失败，提示用户重试或联系客服
         console.error('登录失败', res.errMsg);
         this.showError('微信登录失败，请重试');
-      },
-      complete: () => {
-        if (this.data.isLoading) {
-          this.setData({ isLoading: false });
-        }
+        this.setData({ isLoading: false });
       }
     });
   },
@@ -57,7 +55,7 @@ Page({
 
     // 将code发送到后端服务器
     wx.request({
-      url: `http://localhost:8081/login`,
+      url: config.baseUrl + config.apis.login,
       method: 'POST',
       data: {
         code: code
@@ -85,6 +83,7 @@ Page({
       },
       complete: () => {
         wx.hideLoading();
+        this.setData({ isLoading: false });
       }
     });
   },
@@ -102,11 +101,6 @@ Page({
       wx.setStorageSync('emergencyInfo', Array.isArray(emergencyInfo) ? emergencyInfo : []);
       wx.setStorageSync('bindInfo', Array.isArray(bindInfo) ? bindInfo : []);
       
-      console.log('用户数据已存储', {
-        userInfo,
-        serviceCount: serviceInfo ? serviceInfo.length : 0,
-        bindCount: bindInfo ? bindInfo.length : 0
-      });
     } catch (e) {
       console.error('存储数据失败', e);
     }
@@ -143,4 +137,4 @@ Page({
       duration: 3000
     });
   }
-}); 
+});

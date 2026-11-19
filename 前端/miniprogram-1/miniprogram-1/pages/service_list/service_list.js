@@ -1,9 +1,5 @@
 const app = getApp();
-
-// 补零函数，替代padStart
-function padZero(num) {
-  return num < 10 ? '0' + num : '' + num;
-}
+const { formatBeijingTime } = require('../../utils/serviceTime.js');
 
 Page({
   data: {
@@ -100,7 +96,6 @@ Page({
     const { services, currentStatus } = this.data;
     let filtered = [];
     
-    console.log('筛选服务，当前状态:', currentStatus, '服务列表:', services);
     
     if (currentStatus === 1) {
       // 待进行服务，包括状态为0（未指派）和1（待进行）的服务
@@ -115,7 +110,6 @@ Page({
       );
     }
     
-    console.log('筛选后的服务:', filtered);
     
     this.setData({
       filteredServices: filtered
@@ -252,29 +246,12 @@ Page({
         if (requestedPage === 1) wx.hideLoading();
         
         if (res.statusCode === 200 && res.data && res.data.data) {
-          console.log('获取服务列表成功:', res.data);
           
           var services = res.data.data.map(function(item) {
-            // 转换时间格式
+            // 后端是 UTC Instant，这里统一以北京时间显示。
             if (item.scheduledTime) {
-              // 将UTC时间转换为北京时间（UTC+8）并格式化显示
-              var date = new Date(item.scheduledTime);
-              var beijingTime = new Date(date.getTime() + 8 * 60 * 60 * 1000);
-              
-              // 格式化为 MM-DD HH:MM
-              var month = beijingTime.getMonth() + 1;
-              var day = beijingTime.getDate();
-              var hours = beijingTime.getHours();
-              var minutes = beijingTime.getMinutes();
-              
-              // 补零
-              month = month < 10 ? '0' + month : month;
-              day = day < 10 ? '0' + day : day;
-              hours = hours < 10 ? '0' + hours : hours;
-              minutes = minutes < 10 ? '0' + minutes : minutes;
-              
-              item.formattedTime = month + '-' + day + ' ' + hours + ':' + minutes;
-              item.scheduledTime = item.formattedTime; // 确保scheduledTime字段也被设置
+              item.formattedTime = formatBeijingTime(item.scheduledTime) + '（北京时间）';
+              item.scheduledTime = item.formattedTime;
             }
             
             // 设置状态文本
@@ -334,7 +311,6 @@ Page({
           // 过滤服务
           that.filterServices();
           
-          console.log('过滤后的服务列表:', that.data.filteredServices);
         } else {
           that.setData({
             isLoading: false,

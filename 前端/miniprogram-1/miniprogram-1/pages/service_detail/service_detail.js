@@ -1,29 +1,5 @@
 var app = getApp();
-
-// 补零函数，替代padStart
-function padZero(num) {
-  return num < 10 ? '0' + num : '' + num;
-}
-
-// 格式化日期
-function formatDate(dateStr) {
-  if (!dateStr) return '';
-  try {
-    var date = new Date(dateStr);
-    // 将UTC时间转换为北京时间（UTC+8）
-    var beijingDate = new Date(date.getTime() + 8 * 60 * 60 * 1000);
-    var year = beijingDate.getFullYear();
-    var month = padZero(beijingDate.getMonth() + 1);
-    var day = padZero(beijingDate.getDate());
-    var hour = padZero(beijingDate.getHours());
-    var minute = padZero(beijingDate.getMinutes());
-    
-    return year + '-' + month + '-' + day + ' ' + hour + ':' + minute;
-  } catch (e) {
-    console.error('日期格式化错误:', e);
-    return dateStr;
-  }
-}
+const { formatBeijingTime } = require('../../utils/serviceTime.js');
 
 Page({
   data: {
@@ -91,6 +67,22 @@ Page({
       }, 1500);
     }
   },
+
+  onShow: function() {
+    // 从编辑页返回或切换账户后必须重新校验访问权限与履约状态。
+    if (this._hasShown && this.data.serviceId) {
+      var userInfo = wx.getStorageSync('userInfo') || {};
+      this.setData({
+        userType: userInfo.userType,
+        serviceData: {},
+        applications: [],
+        applicationsLoaded: false
+      });
+      this.updateButtonDisplay();
+      this.fetchServiceFromServer(this.data.serviceId);
+    }
+    this._hasShown = true;
+  },
   
   // 从服务器获取服务数据
   fetchServiceFromServer: function(serviceId) {
@@ -120,14 +112,13 @@ Page({
       success: function(res) {
         wx.hideLoading();
         
-        console.log('服务详情API响应:', res.data);
         
         if (res.statusCode === 200) {
           var service = res.data.service || res.data;
           if (service) {
             // 格式化时间
-            var formattedCreateTime = service.createTime ? formatDate(service.createTime) : '';
-            var formattedScheduledTime = service.scheduledTime ? formatDate(service.scheduledTime) : '';
+            var formattedCreateTime = service.createTime ? formatBeijingTime(service.createTime, true) + '（北京时间）' : '';
+            var formattedScheduledTime = service.scheduledTime ? formatBeijingTime(service.scheduledTime, true) + '（北京时间）' : '';
             
             // 获取服务类型文本
             var typeText = '';
@@ -175,14 +166,18 @@ Page({
           }
         } else {
           console.error('服务详情API返回了错误状态码:', res.statusCode);
+          that.setData({ serviceData: {}, applications: [], applicationsLoaded: false });
+          that.updateButtonDisplay();
           wx.showToast({
-            title: res.data.message || '获取服务详情失败',
+            title: (res.data && res.data.message) || '无权访问或服务已取消',
             icon: 'none'
           });
         }
       },
       fail: function(err) {
         wx.hideLoading();
+        that.setData({ serviceData: {}, applications: [], applicationsLoaded: false });
+        that.updateButtonDisplay();
         console.error('获取服务详情失败:', err);
         wx.showToast({
           title: '网络请求失败',
@@ -398,7 +393,6 @@ Page({
         wx.hideLoading();
         
         if (res.statusCode === 200) {
-          console.log('从服务器获取的服务详情:', res.data);
           
           // 将服务数据添加到缓存
           var cachedServices = wx.getStorageSync('serviceInfo') || [];
