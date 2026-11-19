@@ -138,6 +138,14 @@ public class ServiceServiceImpl implements ServiceService {
     }
 
     @Override
+    public Page<Service> getServicesForUserByStatuses(Integer userId, List<Integer> statuses, Pageable pageable) {
+        if (userId == null || statuses == null || statuses.isEmpty()) {
+            return Page.empty(pageable);
+        }
+        return serviceRepository.findVisibleByStatuses(userId, statuses, pageable);
+    }
+
+    @Override
     public List<Service> getServicesForUser(Integer userId) {
         try {
             if (userId == null) {
