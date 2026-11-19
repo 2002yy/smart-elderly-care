@@ -173,13 +173,21 @@ Page({
       // 监护人(1)的服务对象是老人
       // 老人(0)的服务对象也可以是自己，已经添加过了
       if (userType === 1) {
-         targets.push({
-          id: String(binding.id || ''), // 确保ID是字符串
+        if (binding.partnerId == null) {
+          console.warn('绑定缓存缺少服务对象用户ID，请重新登录刷新绑定信息');
+          return;
+        }
+        targets.push({
+          id: String(binding.partnerId), // 用户ID；binding.id 是绑定记录ID
           name: binding.name // 绑定对象的名字
         });
         targetNames.push(binding.name);
       }
     });
+
+    if (userType === 1 && activeBinds.length > 0 && targets.length === 0) {
+      wx.showToast({ title: '绑定信息已过期，请重新登录', icon: 'none' });
+    }
     
     console.log('初始化后的服务对象列表:', targets);
     
@@ -804,4 +812,4 @@ Page({
       console.error('更新服务缓存失败:', error);
     }
   }
-}); 
+});

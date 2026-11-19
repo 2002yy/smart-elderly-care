@@ -51,14 +51,11 @@ public class BindController {
             for (Bind bind : bindList) {
                 Map<String, Object> bindingMap = new HashMap<>();
 
-                User partner;
-                if (user.getUserType() == 0) { // Current user is an elder, partner is guardian
-                    partner = userService.getUserById(bind.getGuardianId());
-                } else { // Current user is a guardian, partner is elder
-                    partner = userService.getUserById(bind.getElderId());
-                }
+                Integer partnerId = user.getUserType() == 0 ? bind.getGuardianId() : bind.getElderId();
+                User partner = userService.getUserById(partnerId);
 
                 bindingMap.put("id", bind.getBindId());
+                bindingMap.put("partnerId", partnerId); // 用户ID，与绑定关系ID不同
                 bindingMap.put("bind_status", bind.getBindStatus());
 
                 if (partner != null) {
