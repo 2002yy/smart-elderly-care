@@ -20,8 +20,6 @@ import java.util.Map;
 @RequestMapping("/api/bindings")
 public class BindController {
 
-    private final TokenParse tokenParse = new TokenParse();
-
     @Autowired
     private BindService bindService;
 
@@ -32,8 +30,7 @@ public class BindController {
     public ResponseEntity<?> getBindings(@RequestHeader("Authorization") String token) {
         try {
             // 解析token
-            tokenParse.parseToken(token.replace("Bearer ", ""));
-            String openId = tokenParse.getOpenid();
+            String openId = TokenParse.parseToken(token.replace("Bearer ", "")).openId();
             
             // 获取用户信息
             User user = userService.getUserByOpenId(openId);
@@ -93,8 +90,7 @@ public class BindController {
             @RequestBody Map<String, String> body) {
         try {
             // 1. Parse token and get requester user
-            tokenParse.parseToken(token.replace("Bearer ", ""));
-            String openId = tokenParse.getOpenid();
+            String openId = TokenParse.parseToken(token.replace("Bearer ", "")).openId();
             User requester = userService.getUserByOpenId(openId);
             if (requester == null) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "用户不存在"));
@@ -176,8 +172,7 @@ public class BindController {
             @RequestBody Map<String, Integer> body) {
         try {
             // 1. Parse token and get current user
-            tokenParse.parseToken(token.replace("Bearer ", ""));
-            String openId = tokenParse.getOpenid();
+            String openId = TokenParse.parseToken(token.replace("Bearer ", "")).openId();
             User user = userService.getUserByOpenId(openId);
             if (user == null) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "用户不存在"));
@@ -239,8 +234,7 @@ public class BindController {
             @PathVariable Integer id) {
         try {
             // 解析token
-            tokenParse.parseToken(token.replace("Bearer ", ""));
-            String openId = tokenParse.getOpenid();
+            String openId = TokenParse.parseToken(token.replace("Bearer ", "")).openId();
             
             // 获取用户信息
             User user = userService.getUserByOpenId(openId);

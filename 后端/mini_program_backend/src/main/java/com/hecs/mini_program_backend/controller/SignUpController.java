@@ -15,8 +15,6 @@ import java.util.Map;
 @RestController
 public class SignUpController {
 
-    private final TokenParse tokenParse = new TokenParse();
-
     @Autowired
     private UserService userService;
 
@@ -24,8 +22,7 @@ public class SignUpController {
     public ResponseEntity<?> signUpController(@RequestHeader("Authorization") String token, @RequestBody Map<String, Object> body) {
         try {
             // 解析token
-            tokenParse.parseToken(token.replace("Bearer ", ""));
-            String openId = tokenParse.getOpenid();
+            String openId = TokenParse.parseToken(token.replace("Bearer ", "")).openId();
             
             // 获取用户信息
             User user = userService.getUserByOpenId(openId);

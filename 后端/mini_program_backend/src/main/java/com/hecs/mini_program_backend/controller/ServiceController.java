@@ -26,8 +26,6 @@ import java.util.Map;
 public class ServiceController {
     private static final Logger logger = LoggerFactory.getLogger(ServiceController.class);
 
-    private final TokenParse tokenParse = new TokenParse();
-
     @Autowired
     private ServiceService serviceService;
 
@@ -94,8 +92,7 @@ public class ServiceController {
             @RequestParam(defaultValue = "10") int pageSize,
             @RequestParam(required = false) Integer status) {
         try {
-            tokenParse.parseToken(token.replace("Bearer ", ""));
-            String openId = tokenParse.getOpenid();
+            String openId = TokenParse.parseToken(token.replace("Bearer ", "")).openId();
             User user = userService.getUserByOpenId(openId);
             if (user == null) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "用户不存在"));
@@ -131,8 +128,7 @@ public class ServiceController {
         try {
             logger.info("Fetching service detail for ID: {}", id);
             
-            tokenParse.parseToken(token.replace("Bearer ", ""));
-            String openId = tokenParse.getOpenid();
+            String openId = TokenParse.parseToken(token.replace("Bearer ", "")).openId();
             User user = userService.getUserByOpenId(openId);
             if (user == null) {
                 logger.warn("User not found for openId: {}", openId);
@@ -183,8 +179,7 @@ public class ServiceController {
         try {
             logger.info("Create service request: {}", body);
             
-            tokenParse.parseToken(token.replace("Bearer ", ""));
-            String openId = tokenParse.getOpenid();
+            String openId = TokenParse.parseToken(token.replace("Bearer ", "")).openId();
             User user = userService.getUserByOpenId(openId);
             if (user == null) {
                 logger.warn("User not found for openId: {}", openId);
@@ -269,8 +264,7 @@ public class ServiceController {
             logger.info("Update service request for ID {}: {}", id, body);
             
             // 解析token
-            tokenParse.parseToken(token.replace("Bearer ", ""));
-            String openId = tokenParse.getOpenid();
+            String openId = TokenParse.parseToken(token.replace("Bearer ", "")).openId();
             
             // 获取用户信息
             User user = userService.getUserByOpenId(openId);
@@ -351,8 +345,7 @@ public class ServiceController {
             @PathVariable Integer id) {
         try {
             // 解析token
-            tokenParse.parseToken(token.replace("Bearer ", ""));
-            String openId = tokenParse.getOpenid();
+            String openId = TokenParse.parseToken(token.replace("Bearer ", "")).openId();
             
             // 获取用户信息
             User user = userService.getUserByOpenId(openId);
@@ -394,8 +387,7 @@ public class ServiceController {
             @RequestBody Map<String, Object> body) {
         try {
             // 解析token
-            tokenParse.parseToken(token.replace("Bearer ", ""));
-            String openId = tokenParse.getOpenid();
+            String openId = TokenParse.parseToken(token.replace("Bearer ", "")).openId();
             
             // 获取用户信息
             User user = userService.getUserByOpenId(openId);
@@ -486,8 +478,7 @@ public class ServiceController {
             logger.info("Payment request for service ID: {}", id);
             
             // 解析token
-            tokenParse.parseToken(token.replace("Bearer ", ""));
-            String openId = tokenParse.getOpenid();
+            String openId = TokenParse.parseToken(token.replace("Bearer ", "")).openId();
             
             // 获取用户信息
             User user = userService.getUserByOpenId(openId);
