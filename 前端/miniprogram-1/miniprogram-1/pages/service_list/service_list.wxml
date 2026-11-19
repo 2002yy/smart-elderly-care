@@ -29,6 +29,12 @@
           <text>待评价</text>
           <view class="status-indicator" wx:if="{{currentStatus === 4}}"></view>
         </view>
+        <view class="status-item {{currentStatus === 5 ? 'active' : ''}}"
+              bindtap="switchStatus"
+              data-status="{{5}}">
+          <text>已完成</text>
+          <view class="status-indicator" wx:if="{{currentStatus === 5}}"></view>
+        </view>
       </view>
       
       <!-- 员工视图 (userType = 2, 3 或 4) -->
@@ -45,11 +51,11 @@
           <text>进行中</text>
           <view class="status-indicator" wx:if="{{currentStatus === 2}}"></view>
         </view>
-        <view class="status-item {{currentStatus === 'completed' ? 'active' : ''}}" 
+        <view class="status-item {{currentStatus === 5 ? 'active' : ''}}"
               bindtap="switchStatus" 
-              data-status="completed">
+              data-status="{{5}}">
           <text>已完成</text>
-          <view class="status-indicator" wx:if="{{currentStatus === 'completed'}}"></view>
+          <view class="status-indicator" wx:if="{{currentStatus === 5}}"></view>
         </view>
       </view>
     </scroll-view>
@@ -99,4 +105,4 @@
         bindtouchend="onAddBtnTouchEnd">
     <image class="add-icon" src="/resources/plus.png"></image>
   </view>
-</view> 
+</view>

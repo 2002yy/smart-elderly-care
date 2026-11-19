@@ -96,15 +96,12 @@ Page({
 
   // 根据当前状态筛选服务
   filterServices() {
-    const { services, currentStatus, page, pageSize, isClientUser } = this.data;
+    const { services, currentStatus, page, pageSize } = this.data;
     let filtered = [];
     
     console.log('筛选服务，当前状态:', currentStatus, '服务列表:', services);
     
-    if (currentStatus === 'completed' && !isClientUser) {
-      // 员工视图的已完成服务 (状态为3或4)
-      filtered = services.filter(service => service.status === 3 || service.status === 4 || service.serviceStatus === 3 || service.serviceStatus === 4);
-    } else if (currentStatus === 1) {
+    if (currentStatus === 1) {
       // 待进行服务，包括状态为0（未指派）和1（待进行）的服务
       filtered = services.filter(service => 
         service.status === 0 || service.status === 1 || 
@@ -133,6 +130,7 @@ Page({
       case 2: return '进行中';
       case 3: return '待支付';
       case 4: return '待评价';
+      case 5: return '已完成';
       default: return '未知状态';
     }
   },
@@ -145,6 +143,7 @@ Page({
       case 2: return 'status-ongoing';
       case 3: return 'status-payment';
       case 4: return 'status-review';
+      case 5: return 'status-completed';
       default: return '';
     }
   },
@@ -347,4 +346,4 @@ Page({
       }
     });
   }
-}); 
+});

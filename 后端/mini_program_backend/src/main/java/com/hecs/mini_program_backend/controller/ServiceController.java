@@ -399,6 +399,10 @@ public class ServiceController {
             if (!service.getCreatorId().equals(user.getId()) && !service.getTargetId().equals(user.getId())) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body("无权取消此服务");
             }
+            // 履约开始后不得通过历史取消接口硬删除订单与评价事实。
+            if (service.getServiceStatus() == null || (service.getServiceStatus() != 0 && service.getServiceStatus() != 1)) {
+                return ResponseEntity.status(HttpStatus.CONFLICT).body("服务已开始或结束，不能直接删除历史订单");
+            }
             
             // 删除服务
             serviceService.deleteService(id);
