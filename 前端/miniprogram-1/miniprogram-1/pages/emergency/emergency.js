@@ -1,3 +1,5 @@
+const emergencyCache = require('../../utils/emergencyCache.js');
+
 Page({
   data: {
     isEdit: false,
@@ -30,27 +32,36 @@ Page({
   },
 
   onLoad() {
+    this._session = emergencyCache.currentSession();
     // 从后端获取紧急医疗信息
     this.fetchEmergencyInfo();
+  },
+
+  onShow() {
+    if (!emergencyCache.isCurrentSession(this._session)) {
+      this._session = emergencyCache.currentSession();
+      this.setData({ emergencyInfo: {}, originalEmergencyInfo: {}, formChanged: false });
+      this.fetchEmergencyInfo();
+    }
   },
 
   // 从后端获取紧急医疗信息
   fetchEmergencyInfo() {
     this.setData({ loading: true });
-    
-    // 获取token
-    const token = wx.getStorageSync('token');
-    if (!token) {
+    const session = emergencyCache.currentSession();
+    if (!session) {
       wx.showToast({
         title: '请先登录',
         icon: 'none'
       });
+      this.setData({ loading: false });
       return;
     }
+    const token = session.token;
     
     // 获取全局配置中的baseUrl
     const app = getApp();
-    const baseUrl = app.globalData.baseUrl || 'http://localhost:8081';
+    const baseUrl = app.globalData.baseUrl;
     
     wx.request({
       url: `${baseUrl}/api/emergency/info`,
@@ -59,12 +70,13 @@ Page({
         'Authorization': `Bearer ${token}`
       },
       success: (res) => {
-        if (res.statusCode === 200 && res.data.emergencyInfo) {
+        if (!emergencyCache.isCurrentSession(session)) return;
+        if (res.statusCode === 200 && res.data && res.data.emergencyInfo) {
           // 从后端获取数据成功
           const emergencyInfo = res.data.emergencyInfo;
           
           // 保存到本地缓存
-          wx.setStorageSync('emergencyInfo', emergencyInfo);
+          emergencyCache.saveEmergencyInfo(emergencyInfo, session);
           
           // 保存原始数据用于比较
           const originalEmergencyInfo = JSON.parse(JSON.stringify(emergencyInfo));
@@ -75,32 +87,34 @@ Page({
             formChanged: false
           });
         } else {
-          // 获取失败，尝试从本地缓存加载
-          this.loadEmergencyInfoFromCache();
+          // 登录失效或禁止访问不能用旧数据掩盖；仅服务端故障允许离线副本。
+          if (res.statusCode >= 500) this.loadEmergencyInfoFromCache();
+          else this.setData({ emergencyInfo: {}, originalEmergencyInfo: {}, formChanged: false });
           console.error('获取紧急医疗信息失败:', res);
         }
       },
       fail: (err) => {
+        if (!emergencyCache.isCurrentSession(session)) return;
         // 请求失败，尝试从本地缓存加载
         this.loadEmergencyInfoFromCache();
         console.error('请求紧急医疗信息失败:', err);
       },
       complete: () => {
-        this.setData({ loading: false });
+        if (emergencyCache.isCurrentSession(session)) this.setData({ loading: false });
       }
     });
   },
 
   // 从缓存加载数据（作为后备方案）
   loadEmergencyInfoFromCache() {
-    const emergencyInfo = wx.getStorageSync('emergencyInfo') || {
+    const emergencyInfo = Object.assign({
       bloodType: '',
       allergies: '',
       basicDiseases: '',
       surgeryHistory: '',
       medication: '',
       emergencyNotes: ''
-    };
+    }, emergencyCache.readEmergencyInfo());
 
     // 保存原始数据用于比较
     const originalEmergencyInfo = JSON.parse(JSON.stringify(emergencyInfo));
@@ -151,16 +165,15 @@ Page({
   // 提交表单
   onSubmit() {
     const { emergencyInfo } = this.data;
-    
-    // 获取token
-    const token = wx.getStorageSync('token');
-    if (!token) {
+    const session = emergencyCache.currentSession();
+    if (!session || !emergencyCache.isCurrentSession(this._session)) {
       wx.showToast({
-        title: '请先登录',
+        title: '登录账号已变化，请重新进入页面',
         icon: 'none'
       });
       return;
     }
+    const token = session.token;
     
     // 显示加载中
     wx.showLoading({
@@ -169,7 +182,7 @@ Page({
     
     // 获取全局配置中的baseUrl
     const app = getApp();
-    const baseUrl = app.globalData.baseUrl || 'http://localhost:8081';
+    const baseUrl = app.globalData.baseUrl;
     
     // 发送到后端
     wx.request({
@@ -181,9 +194,10 @@ Page({
       },
       data: emergencyInfo,
       success: (res) => {
+        if (!emergencyCache.isCurrentSession(session)) return;
         if (res.statusCode === 200) {
           // 保存到本地缓存
-          wx.setStorageSync('emergencyInfo', emergencyInfo);
+          emergencyCache.saveEmergencyInfo(emergencyInfo, session);
           
           // 显示保存成功提示
           wx.showToast({
@@ -210,6 +224,7 @@ Page({
         }
       },
       fail: (err) => {
+        if (!emergencyCache.isCurrentSession(session)) return;
         wx.showToast({
           title: '网络错误，请重试',
           icon: 'none'
@@ -221,4 +236,4 @@ Page({
       }
     });
   }
-}); 
+});

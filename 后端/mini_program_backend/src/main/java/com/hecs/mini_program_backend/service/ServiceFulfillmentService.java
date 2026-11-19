@@ -16,6 +16,7 @@ public class ServiceFulfillmentService {
     @Autowired private ServiceRepository serviceRepository;
     @Autowired private ServiceApplicationRepository applicationRepository;
     @Autowired private ServiceApplicationService applicationService;
+    @Autowired private ServiceCustomerAccess customerAccess;
 
     @Transactional
     public Service start(Integer serviceId, User worker) {
@@ -80,9 +81,7 @@ public class ServiceFulfillmentService {
     }
 
     private void requireCustomer(Service service, User user) {
-        if (user == null || user.getId() == null
-                || (!user.getId().equals(service.getCreatorId())
-                    && !user.getId().equals(service.getTargetId()))) {
+        if (!customerAccess.canManageService(service, user)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "只有订单当事人可以确认或取消");
         }
     }

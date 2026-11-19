@@ -1,30 +1,17 @@
 var app = getApp();
+const { beijingCalendarDay, beijingClock, beijingWallTimeToIso, formatBeijingTime } = require('../../utils/serviceTime.js');
 
 // 补零函数，替代padStart
 function padZero(num) {
   return num < 10 ? '0' + num : '' + num;
 }
 
-// 将本地时间转换为UTC时间的ISO字符串
-function convertToUTCTime(dateStr) {
-  const date = new Date(dateStr);
-  console.log('原始日期字符串:', dateStr);
-  console.log('解析后的本地日期对象:', date.toString());
-  
-  // 将本地时间转换为UTC时间，需要减去8小时
-  const utcDate = new Date(date.getTime() - 8 * 60 * 60 * 1000);
-  console.log('转换为UTC的日期对象:', utcDate.toString());
-  console.log('转换为ISO字符串:', utcDate.toISOString());
-  
-  return utcDate.toISOString();
-}
-
 // 获取从当前时间开始的时间段
 function getAvailableTimes(isToday) {
   const times = [];
-  const now = new Date();
-  const startHour = isToday ? now.getHours() : 8;
-  const startMinute = isToday ? now.getMinutes() : 0;
+  const now = beijingClock();
+  const startHour = isToday ? now.hour : 8;
+  const startMinute = isToday ? now.minute : 0;
 
   for (let h = startHour; h < 21; h++) { // 服务时间到晚上8点
     for (let m = 0; m < 60; m += 30) {
@@ -64,9 +51,8 @@ Page({
       (function() {
         var dateArr = [];
         for (var i = 0; i < 7; i++) {
-          var date = new Date();
-          date.setDate(date.getDate() + i);
-          dateArr.push((date.getMonth() + 1) + '月' + date.getDate() + '日');
+          var date = beijingCalendarDay(i);
+          dateArr.push(date.month + '月' + date.date + '日');
         }
         return dateArr;
       })(),
@@ -78,8 +64,7 @@ Page({
     hasFormChanged: false, // 表单是否有修改
     isEdit: false, // 是否是编辑模式
     serviceId: '', // 服务ID（编辑模式下使用）
-    originalFormData: null, // 原始表单数据（编辑模式下用于比较）
-    hasTriedFetchingFromServer: false // 是否已经尝试过从服务器获取
+    originalFormData: null // 原始表单数据（编辑模式下用于比较）
   },
 
   onLoad: function(options) {
@@ -90,7 +75,8 @@ Page({
     // 初始化可选时间，默认是今天
     this.setData({
       'timeRange[1]': getAvailableTimes(true),
-      hasTriedFetchingFromServer: false // 重置标志
+      isEdit: Boolean(options && options.id),
+      serviceId: options && options.id ? options.id : ''
     });
     
     // 初始化服务对象列表
@@ -106,15 +92,10 @@ Page({
     
     // 检查是否是编辑模式
     if (options && options.id) {
-      this.setData({
-        isEdit: true,
-        serviceId: options.id
-      });
-      
       console.log('编辑模式，服务ID:', options.id);
       
-      // 加载服务详情
-      this.loadServiceDetail(options.id);
+      // 编辑必须读取服务端原始 ISO 时间及最新权限/状态；列表缓存是展示数据，不可当编辑源。
+      this.fetchServiceFromServer(options.id);
     } else {
       // 创建模式下，设置表单已修改，以便可以提交
       this.setData({
@@ -130,13 +111,13 @@ Page({
     var userInfo = wx.getStorageSync('userInfo') || {};
     // 确保userType存在，若不存在，说明用户信息异常，给予默认值或进行错误处理
     var userType = (userInfo && userInfo.userType !== null) ? userInfo.userType : 99;
-    var bindings = wx.getStorageSync('bindInfo') || [];
+    var bindingOwnerId = wx.getStorageSync('bindInfoOwnerId');
+    var bindings = wx.getStorageSync('token') && bindingOwnerId === String(userInfo.id)
+      ? (wx.getStorageSync('bindInfo') || []) : [];
     var targets = [];
     var targetNames = [];
     
     console.log('初始化服务对象列表，用户类型:', userType);
-    console.log('用户信息:', userInfo);
-    console.log('绑定信息:', bindings);
     
     // 如果是老人用户(userType=0)，可以选择自己
     if (userType === 0) {
@@ -152,7 +133,7 @@ Page({
     // 如果当前用户是老人(0)，服务对象是监护人(1)，但一般服务是为老人创建的
     const activeBinds = bindings.filter(b => b.bind_status === 1);
 
-    if (userType === 1 && activeBinds.length === 0) {
+    if (userType === 1 && activeBinds.length === 0 && !this.data.isEdit) {
       wx.showModal({
         title: '无法创建服务',
         content: '您还没有绑定任何老人，请先去绑定。',
@@ -189,7 +170,6 @@ Page({
       wx.showToast({ title: '绑定信息已过期，请重新登录', icon: 'none' });
     }
     
-    console.log('初始化后的服务对象列表:', targets);
     
     this.setData({
       serviceTargets: targets,
@@ -197,28 +177,12 @@ Page({
     });
   },
   
-  // 加载服务详情
-  loadServiceDetail: function(serviceId) {
-    var cachedServices = wx.getStorageSync('serviceInfo') || [];
-    var service = null;
-    
-    console.log('正在加载服务详情，ID:', serviceId);
-    console.log('缓存中的服务列表:', cachedServices);
-    
-    // 从缓存中查找服务
-    for (var i = 0; i < cachedServices.length; i++) {
-      if (cachedServices[i].id === serviceId || cachedServices[i].serviceId === serviceId) {
-        service = cachedServices[i];
-        console.log('找到匹配的服务:', service);
-        break;
-      }
-    }
-    
-    if (service) {
+  // 只使用服务端响应回填编辑表单，避免数字/字符串 ID 不匹配及缓存的展示时间污染。
+  applyServiceDetail: function(service) {
       // 找到服务对象的索引
       var targetIndex = -1;
       for (var i = 0; i < this.data.serviceTargets.length; i++) {
-        if (this.data.serviceTargets[i].id === service.targetId) {
+        if (String(this.data.serviceTargets[i].id) === String(service.targetId)) {
           targetIndex = i;
           break;
         }
@@ -238,32 +202,26 @@ Page({
       if (scheduledTime) {
         // 尝试解析日期和时间
         try {
-          var dateObj = new Date(scheduledTime);
-          // 将UTC时间转换为北京时间
-          dateObj = new Date(dateObj.getTime() + 8 * 60 * 60 * 1000);
+          var localScheduledTime = formatBeijingTime(scheduledTime, true);
+          var scheduledDay = localScheduledTime.slice(0, 10);
+          var timeString = localScheduledTime.slice(11);
           
           // 找到日期索引
           for (var i = 0; i < 7; i++) {
-            var compareDate = new Date();
-            compareDate.setDate(compareDate.getDate() + i);
-            
-            if (dateObj.getDate() === compareDate.getDate() && 
-                dateObj.getMonth() === compareDate.getMonth()) {
+            var compareDate = beijingCalendarDay(i);
+            var comparedDay = `${compareDate.year}-${padZero(compareDate.month)}-${padZero(compareDate.date)}`;
+            if (scheduledDay === comparedDay) {
               timeIndex[0] = i;
               break;
             }
           }
           
           // 找到时间索引
-          var hours = dateObj.getHours();
-          var minutes = dateObj.getMinutes();
-          var timeString = padZero(hours) + ':' + padZero(minutes);
+          var availableTimes = getAvailableTimes(timeIndex[0] === 0);
+          this.setData({ 'timeRange[1]': availableTimes });
           
-          console.log('解析的时间:', timeString);
-          console.log('可用时间列表:', this.data.timeRange[1]);
-          
-          for (var i = 0; i < this.data.timeRange[1].length; i++) {
-            if (this.data.timeRange[1][i] === timeString) {
+          for (var i = 0; i < availableTimes.length; i++) {
+            if (availableTimes[i] === timeString) {
               timeIndex[1] = i;
               break;
             }
@@ -277,55 +235,20 @@ Page({
       var formData = {
         typeIndex: typeIndex,
         timeIndex: timeIndex,
-        scheduledTime: scheduledTime,
+        scheduledTime: formatBeijingTime(scheduledTime, true) || '',
         address: service.address || service.appointedAddress || '',
         remark: service.remark || service.serviceDes || '',
         targetIndex: targetIndex,
-        targetId: service.targetId || ''
+        targetId: service.targetId || '',
+        targetName: service.targetName || '当前服务对象',
+        isoScheduledTime: scheduledTime
       };
-      
-      console.log('设置表单数据:', formData);
-      
-      // 对于编辑模式，我们需要设置isoScheduledTime，这样在提交时可以使用
-      // 如果我们有原始的scheduledTime，就将其转换为UTC时间的ISO字符串
-      if (scheduledTime) {
-        try {
-          // 尝试解析原始的scheduledTime
-          var originalDate = new Date(scheduledTime);
-          // 转换为UTC时间的ISO字符串，这样提交时可以使用
-          formData.isoScheduledTime = originalDate.toISOString();
-          console.log('设置isoScheduledTime:', formData.isoScheduledTime);
-        } catch (e) {
-          console.error('转换scheduledTime为ISO格式失败:', e);
-        }
-      }
       
       this.setData({
         formData: formData,
         originalFormData: JSON.parse(JSON.stringify(formData)), // 保存原始数据的副本
         hasFormChanged: false // 初始时表单未修改
       });
-    } else {
-      // 防止无限循环，检查是否已经尝试过从服务器获取
-      if (this.data.hasTriedFetchingFromServer) {
-        console.error('无法找到服务，即使从服务器获取也失败');
-        wx.showToast({
-          title: '无法找到服务信息',
-          icon: 'none'
-        });
-        
-        // 延迟返回
-        setTimeout(function() {
-          wx.navigateBack();
-        }, 1500);
-        return;
-      }
-      
-      // 未找到服务，尝试从服务器获取
-      console.log('缓存中未找到服务，尝试从服务器获取');
-      this.setData({ hasTriedFetchingFromServer: true });
-      this.fetchServiceFromServer(serviceId);
-    }
   },
   
   // 从服务器获取服务详情
@@ -356,74 +279,9 @@ Page({
       success: function(res) {
         wx.hideLoading();
         
-        console.log('服务详情API响应:', res);
-        console.log('服务详情数据:', res.data);
         
         if (res.statusCode === 200 && res.data) {
-          var service = res.data; // 直接使用res.data，不需要res.data.service
-          
-          // 确保service对象包含所有必需的字段
-          if (!service.id && service.serviceId) {
-            service.id = service.serviceId;
-          }
-          
-          if (!service.serviceId && service.id) {
-            service.serviceId = service.id;
-          }
-          
-          if (service.type === undefined && service.serviceType !== undefined) {
-            service.type = service.serviceType;
-          }
-          
-          if (service.serviceType === undefined && service.type !== undefined) {
-            service.serviceType = service.type;
-          }
-          
-          if (!service.address && service.appointedAddress) {
-            service.address = service.appointedAddress;
-          }
-          
-          if (!service.appointedAddress && service.address) {
-            service.appointedAddress = service.address;
-          }
-          
-          if (!service.remark && service.serviceDes) {
-            service.remark = service.serviceDes;
-          }
-          
-          if (!service.serviceDes && service.remark) {
-            service.serviceDes = service.remark;
-          }
-          
-          console.log('处理后的服务数据:', service);
-          
-          // 将获取的服务添加到缓存
-          var cachedServices = wx.getStorageSync('serviceInfo') || [];
-          var found = false;
-          
-          // 检查是否已存在
-          for (var i = 0; i < cachedServices.length; i++) {
-            if (cachedServices[i].id === service.id || 
-                cachedServices[i].serviceId === service.serviceId || 
-                cachedServices[i].id === parseInt(service.id) || 
-                cachedServices[i].serviceId === parseInt(service.serviceId)) {
-              // 更新现有服务
-              cachedServices[i] = service;
-              found = true;
-              break;
-            }
-          }
-          
-          // 不存在则添加
-          if (!found) {
-            cachedServices.push(service);
-          }
-          
-          // 更新缓存
-          wx.setStorageSync('serviceInfo', cachedServices);
-          
-          // 重新加载服务详情
-          that.loadServiceDetail(serviceId);
+          that.applyServiceDetail(res.data.service || res.data);
         } else {
           console.error('获取服务详情失败:', res);
           wx.showToast({
@@ -505,7 +363,6 @@ Page({
     
     if (value >= 0 && value < this.data.serviceTargets.length) {
       var targetId = this.data.serviceTargets[value].id;
-      console.log('选择的服务对象:', this.data.serviceTargets[value]);
       console.log('服务对象ID:', targetId, '类型:', typeof targetId);
       
       // 确保targetId是字符串类型
@@ -527,11 +384,11 @@ Page({
     var datePart = this.data.timeRange[0][val[0]];
     var timePart = this.data.timeRange[1][val[1]];
 
-    // 重新获取当前年份
-    var year = new Date().getFullYear();
-    // 注意：这里的月份和日期解析需要健壮，因为它依赖于 'M月d日' 格式
-    var month = parseInt(datePart.split('月')[0]);
-    var day = parseInt(datePart.split('月')[1].replace('日', ''));
+    // 使用北京时间的日历日，避免跨年时仍把 1 月预约算成上一年。
+    var selectedDay = beijingCalendarDay(Number(val[0]));
+    var year = selectedDay.year;
+    var month = selectedDay.month;
+    var day = selectedDay.date;
 
     if (!timePart || timePart.includes('今日已无可预约时间')) {
       wx.showToast({
@@ -555,7 +412,7 @@ Page({
     // 存储一个ISO格式的时间，用于后续提交给后端
     try {
       // 转换为ISO格式的UTC时间
-      var isoTime = convertToUTCTime(scheduledTimeStr);
+      var isoTime = beijingWallTimeToIso(scheduledTimeStr);
       console.log('转换后的ISO格式UTC时间:', isoTime);
       
       this.setData({
@@ -600,7 +457,7 @@ Page({
     if (!originalData) return;
     
     var changed = 
-      formData.scheduledTime !== originalData.scheduledTime ||
+      formData.isoScheduledTime !== originalData.isoScheduledTime ||
       formData.address !== originalData.address ||
       formData.remark !== originalData.remark;
     
@@ -631,7 +488,10 @@ Page({
       return;
     }
     
-    if (this.data.formData.timeIndex[0] === -1) {
+    // 编辑已有预约时，时间可能已超出新建预约的未来七天选择范围；
+    // 允许保留服务端原定时间，仅在用户主动改期时使用新的选择值。
+    if (!this.data.formData.isoScheduledTime
+        || (!this.data.isEdit && this.data.formData.timeIndex[0] === -1)) {
       this.showToastError('请选择预约时间');
       return;
     }
@@ -641,7 +501,8 @@ Page({
       return;
     }
     
-    if (this.data.formData.targetIndex === -1 || !this.data.formData.targetId) {
+    if ((!this.data.isEdit && this.data.formData.targetIndex === -1)
+        || !this.data.formData.targetId) {
       this.showToastError('请选择服务对象');
       return;
     }
@@ -679,12 +540,9 @@ Page({
       dataToSend.targetId = String(targetId || ''); // 转换为字符串，确保非空
     }
 
-    console.log('发送的数据:', dataToSend);
     console.log('数据类型检查:');
     console.log('- type:', typeof dataToSend.type, dataToSend.type);
     console.log('- scheduledTime:', typeof dataToSend.scheduledTime, dataToSend.scheduledTime);
-    console.log('- address:', typeof dataToSend.address, dataToSend.address);
-    console.log('- remark:', typeof dataToSend.remark, dataToSend.remark);
     if (!this.data.isEdit) {
       console.log('- targetId:', typeof dataToSend.targetId, dataToSend.targetId);
     }
@@ -698,7 +556,6 @@ Page({
       },
       data: dataToSend,
       success: (res) => {
-        console.log('服务提交响应:', res);
         
         if (res.statusCode === 200 || res.statusCode === 201) {
           wx.showToast({
@@ -706,9 +563,6 @@ Page({
             icon: 'success'
           });
           
-          // 清除缓存的服务信息以触发刷新
-          wx.removeStorageSync('serviceInfo');
-
           setTimeout(() => {
             wx.switchTab({
               url: '/pages/service_list/service_list'
@@ -760,54 +614,5 @@ Page({
       title: message,
       icon: 'none'
     });
-  },
-
-  // 更新本地服务缓存
-  updateLocalServiceCache: function(newService, isEdit) {
-    try {
-      // 获取现有缓存
-      var cachedServices = wx.getStorageSync('serviceInfo') || [];
-      
-      if (isEdit) {
-        // 修改模式：更新现有服务
-        for (var i = 0; i < cachedServices.length; i++) {
-          if (cachedServices[i].id === this.data.serviceId) {
-            cachedServices[i].type = newService.type;
-            cachedServices[i].scheduledTime = newService.scheduled_time;
-            cachedServices[i].address = newService.address;
-            cachedServices[i].remark = newService.remark;
-            cachedServices[i].targetId = newService.target_id;
-            // 使用北京时间
-            cachedServices[i].updateTime = new Date(new Date().getTime() + 8 * 60 * 60 * 1000).toISOString();
-            break;
-          }
-        }
-      } else {
-        // 创建模式：添加新服务
-        var targetName = '';
-        if (this.data.formData.targetIndex >= 0 && this.data.formData.targetIndex < this.data.serviceTargets.length) {
-          targetName = this.data.serviceTargets[this.data.formData.targetIndex].name;
-        }
-        
-        cachedServices.unshift({
-          id: newService.id || 'temp_' + Date.now(),
-          type: newService.type,
-          scheduledTime: newService.scheduled_time,
-          address: newService.address,
-          remark: newService.remark,
-          status: newService.status,
-          targetId: newService.target_id,
-          targetName: targetName,
-          // 使用北京时间
-          createTime: new Date(new Date().getTime() + 8 * 60 * 60 * 1000).toISOString()
-        });
-      }
-      
-      // 更新缓存
-      wx.setStorageSync('serviceInfo', cachedServices);
-      console.log('已更新服务缓存:', cachedServices);
-    } catch (error) {
-      console.error('更新服务缓存失败:', error);
-    }
   }
 });

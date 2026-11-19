@@ -8,7 +8,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
-import java.util.Collections;
 import java.util.List;
 
 @org.springframework.stereotype.Service
@@ -18,48 +17,6 @@ public class ServiceServiceImpl implements ServiceService {
     @Autowired
     private ServiceRepository serviceRepository;
 
-    @Override
-    public List<Service> getServiceByObjectId(Integer objectId) {
-        try {
-            if (objectId == null) {
-                logger.warn("Null objectId provided to getServiceByObjectId");
-                return Collections.emptyList();
-            }
-            return serviceRepository.findByTargetId(objectId);
-        } catch (Exception e) {
-            logger.error("Error fetching services by objectId: {}", objectId, e);
-            return Collections.emptyList();
-        }
-    }
-
-    @Override
-    public List<Service> getServiceByCreatorId(Integer creatorId) {
-        try {
-            if (creatorId == null) {
-                logger.warn("Null creatorId provided to getServiceByCreatorId");
-                return Collections.emptyList();
-            }
-            return serviceRepository.findByCreatorId(creatorId);
-        } catch (Exception e) {
-            logger.error("Error fetching services by creatorId: {}", creatorId, e);
-            return Collections.emptyList();
-        }
-    }
-
-    @Override
-    public List<Service> getServiceByEmployeeId(Integer employeeId) {
-        try {
-            if (employeeId == null) {
-                logger.warn("Null employeeId provided to getServiceByEmployeeId");
-                return Collections.emptyList();
-            }
-            return serviceRepository.findByProviderId(employeeId);
-        } catch (Exception e) {
-            logger.error("Error fetching services by employeeId: {}", employeeId, e);
-            return Collections.emptyList();
-        }
-    }
-    
     @Override
     public Service getServiceById(Integer serviceId) {
         try {
@@ -71,16 +28,6 @@ public class ServiceServiceImpl implements ServiceService {
         } catch (Exception e) {
             logger.error("Error fetching service by id: {}", serviceId, e);
             return null;
-        }
-    }
-    
-    @Override
-    public Page<Service> getServicesByStatus(Integer status, Pageable pageable) {
-        try {
-            return serviceRepository.findByServiceStatus(status, pageable);
-        } catch (Exception e) {
-            logger.error("Error fetching services by status: {}", status, e);
-            throw e;
         }
     }
     
@@ -110,27 +57,13 @@ public class ServiceServiceImpl implements ServiceService {
     }
     
     @Override
-    public void deleteService(Integer serviceId) {
-        try {
-            if (serviceId == null) {
-                logger.warn("Null serviceId provided to deleteService");
-                return;
-            }
-            serviceRepository.deleteById(serviceId);
-        } catch (Exception e) {
-            logger.error("Error deleting service with id: {}", serviceId, e);
-            throw e;
-        }
-    }
-
-    @Override
     public Page<Service> getServicesForUser(Integer userId, Pageable pageable) {
         try {
             if (userId == null) {
                 logger.warn("Null userId provided to getServicesForUser");
                 return Page.empty(pageable);
             }
-            return serviceRepository.findByCreatorIdOrTargetId(userId, userId, pageable);
+            return serviceRepository.findAccessibleToCustomer(userId, pageable);
         } catch (Exception e) {
             logger.error("Error fetching services for user: {}", userId, e);
             throw e;
@@ -145,17 +78,4 @@ public class ServiceServiceImpl implements ServiceService {
         return serviceRepository.findVisibleByStatuses(userId, statuses, pageable);
     }
 
-    @Override
-    public List<Service> getServicesForUser(Integer userId) {
-        try {
-            if (userId == null) {
-                logger.warn("Null userId provided to getServicesForUser");
-                return Collections.emptyList();
-            }
-            return serviceRepository.findByCreatorIdOrTargetId(userId, userId);
-        } catch (Exception e) {
-            logger.error("Error fetching services for user: {}", userId, e);
-            return Collections.emptyList();
-        }
-    }
 }

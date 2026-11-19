@@ -1,6 +1,6 @@
 <!--pages/service_evaluate/service_evaluate.wxml-->
 <view class="evaluate-container">
-  <form bindsubmit="onSubmit">
+  <form wx:if="{{serviceData}}" bindsubmit="onSubmit">
     <!-- 服务信息 -->
     <view class="service-info-card">
       <view class="service-header">
@@ -77,8 +77,8 @@
                 placeholder="请输入您的评价内容（选填）" 
                 value="{{comment}}"
                 bindinput="onContentInput"
-                maxlength="500"/>
-      <view class="content-counter">{{comment.length || 0}}/500</view>
+                maxlength="255"/>
+      <view class="content-counter">{{comment.length || 0}}/255</view>
     </view>
 
     <!-- 提交按钮 -->
@@ -88,4 +88,4 @@
       提交评价
     </button>
   </form>
-</view> 
+</view>

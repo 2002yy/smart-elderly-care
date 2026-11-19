@@ -15,16 +15,21 @@ import java.util.Optional;
 
 @Repository
 public interface ServiceRepository extends JpaRepository<Service,Integer> {
-    List<Service> findByCreatorId(Integer creatorId);
-    List<Service> findByTargetId(Integer targetId);
-    List<Service> findByProviderId(Integer providerId);
     Service findByServiceId(Integer serviceId);
-    Page<Service> findByServiceStatus(Integer status, Pageable pageable);
-    Page<Service> findByCreatorIdOrTargetId(Integer creatorId, Integer targetId, Pageable pageable);
-    @Query("SELECT s FROM Service s WHERE (s.creatorId = :userId OR s.targetId = :userId) AND s.serviceStatus IN :statuses")
+    // 监护关系解除后，历史订单仍属于老人，但不再向原创建监护人返回姓名/地址。
+    @Query("SELECT s FROM Service s WHERE s.targetId = :userId OR "
+            + "(s.creatorId = :userId AND EXISTS (SELECT b.bindId FROM Bind b "
+            + "WHERE b.elderId = s.targetId AND b.guardianId = :userId AND b.bindStatus = 1) "
+            + "AND EXISTS (SELECT u.id FROM User u WHERE u.id = :userId AND u.userType = 1))")
+    Page<Service> findAccessibleToCustomer(@Param("userId") Integer userId, Pageable pageable);
+
+    @Query("SELECT s FROM Service s WHERE (s.targetId = :userId OR "
+            + "(s.creatorId = :userId AND EXISTS (SELECT b.bindId FROM Bind b "
+            + "WHERE b.elderId = s.targetId AND b.guardianId = :userId AND b.bindStatus = 1) "
+            + "AND EXISTS (SELECT u.id FROM User u WHERE u.id = :userId AND u.userType = 1))) "
+            + "AND s.serviceStatus IN :statuses")
     Page<Service> findVisibleByStatuses(@Param("userId") Integer userId,
                                        @Param("statuses") List<Integer> statuses, Pageable pageable);
-    List<Service> findByCreatorIdOrTargetId(Integer creatorId, Integer targetId);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT s FROM Service s WHERE s.serviceId = :serviceId")

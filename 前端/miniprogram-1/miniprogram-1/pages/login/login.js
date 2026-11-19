@@ -1,5 +1,6 @@
 // pages/login.js
 const config = require('../../config.js');
+const emergencyCache = require('../../utils/emergencyCache.js');
 
 Page({
   data: {
@@ -17,6 +18,7 @@ Page({
    * 3. 如果未授权，显示提示信息
    */
   handleWechatLogin(e) {
+    if (this.data.isLoading) return;
     // 微信新版本不再返回userInfo，直接进行登录
     this.setData({ isLoading: true });
     
@@ -30,17 +32,14 @@ Page({
         } else {
           console.error('登录失败', res.errMsg);
           this.showError('获取登录凭证失败，请重试');
+          this.setData({ isLoading: false });
         }
       },
       fail: (res) => {
         // 登录失败，提示用户重试或联系客服
         console.error('登录失败', res.errMsg);
         this.showError('微信登录失败，请重试');
-      },
-      complete: () => {
-        if (this.data.isLoading) {
-          this.setData({ isLoading: false });
-        }
+        this.setData({ isLoading: false });
       }
     });
   },
@@ -57,7 +56,7 @@ Page({
 
     // 将code发送到后端服务器
     wx.request({
-      url: `http://localhost:8081/login`,
+      url: config.baseUrl + config.apis.login,
       method: 'POST',
       data: {
         code: code
@@ -65,10 +64,10 @@ Page({
       success: (res) => {
         if (res.statusCode === 200) {
           // 登录成功，服务器返回的数据通常包含用户的 openid 和自定义登录态（如 token）
-          const { token, userInfo, serviceInfo, emergencyInfo, bindInfo } = res.data;
+          const { token, userInfo, emergencyInfo, bindInfo } = res.data;
           
           // 存储数据到本地
-          this.storeUserData(token, userInfo, serviceInfo, emergencyInfo, bindInfo);
+          this.storeUserData(token, userInfo, emergencyInfo, bindInfo);
           
           // 根据用户类型跳转
           this.navigateAfterLogin(userInfo);
@@ -85,6 +84,7 @@ Page({
       },
       complete: () => {
         wx.hideLoading();
+        this.setData({ isLoading: false });
       }
     });
   },
@@ -92,21 +92,20 @@ Page({
   /**
    * 存储用户数据到本地存储
    */
-  storeUserData(token, userInfo, serviceInfo, emergencyInfo, bindInfo) {
+  storeUserData(token, userInfo, emergencyInfo, bindInfo) {
     try {
+      // 旧版本曾持久缓存完整订单（含住址、老人姓名），不再保留它。
+      wx.removeStorageSync('serviceInfo');
       wx.setStorageSync('token', token);
       wx.setStorageSync('userInfo', userInfo);
-      
-      // 确保数据是数组，即使是空的
-      wx.setStorageSync('serviceInfo', Array.isArray(serviceInfo) ? serviceInfo : []);
-      wx.setStorageSync('emergencyInfo', Array.isArray(emergencyInfo) ? emergencyInfo : []);
+
+      // 旧版无账号归属的病史缓存不能安全迁移；新的离线副本只属于本次登录的账号。
+      wx.removeStorageSync('emergencyInfo');
+      const medicalRecord = Array.isArray(emergencyInfo) ? emergencyInfo[0] : emergencyInfo;
+      emergencyCache.saveEmergencyInfo(medicalRecord || {});
       wx.setStorageSync('bindInfo', Array.isArray(bindInfo) ? bindInfo : []);
+      wx.setStorageSync('bindInfoOwnerId', String(userInfo.id));
       
-      console.log('用户数据已存储', {
-        userInfo,
-        serviceCount: serviceInfo ? serviceInfo.length : 0,
-        bindCount: bindInfo ? bindInfo.length : 0
-      });
     } catch (e) {
       console.error('存储数据失败', e);
     }
@@ -143,4 +142,4 @@ Page({
       duration: 3000
     });
   }
-}); 
+});

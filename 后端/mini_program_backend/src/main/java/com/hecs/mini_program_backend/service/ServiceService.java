@@ -7,15 +7,9 @@ import org.springframework.data.domain.Pageable;
 import java.util.List;
 
 public interface ServiceService {
-    List<Service> getServiceByObjectId(Integer objectId);
-    List<Service> getServiceByCreatorId(Integer creatorId);
-    List<Service> getServiceByEmployeeId(Integer employeeId);
     Service getServiceById(Integer serviceId);
-    Page<Service> getServicesByStatus(Integer status, Pageable pageable);
     Page<Service> getServicesForUser(Integer userId, Pageable pageable);
     Page<Service> getServicesForUserByStatuses(Integer userId, List<Integer> statuses, Pageable pageable);
-    List<Service> getServicesForUser(Integer userId);
     Service createService(Service service);
     Service updateService(Service service);
-    void deleteService(Integer serviceId);
 }

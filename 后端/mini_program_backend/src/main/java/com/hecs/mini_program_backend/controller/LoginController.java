@@ -7,11 +7,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hecs.mini_program_backend.config.WeChatConfig;
 import com.hecs.mini_program_backend.entity.Bind;
 import com.hecs.mini_program_backend.entity.Emergency;
-import com.hecs.mini_program_backend.entity.Service;
 import com.hecs.mini_program_backend.entity.User;
 import com.hecs.mini_program_backend.service.BindService;
 import com.hecs.mini_program_backend.service.EmergencyService;
-import com.hecs.mini_program_backend.service.ServiceService;
 import com.hecs.mini_program_backend.service.UserService;
 import com.hecs.mini_program_backend.utils.TokenGenerate;
 import org.slf4j.Logger;
@@ -37,9 +35,6 @@ public class LoginController {
 
     @Autowired
     private UserService userService;
-
-    @Autowired
-    private ServiceService serviceService;
 
     @Autowired
     private BindService bindService;
@@ -114,42 +109,28 @@ public class LoginController {
                 default -> Collections.emptyList();
             };
 
-            List<Map<String, Object>> bindInfo = rawBinds.stream().map(bind -> {
-                Map<String, Object> bindingMap = new HashMap<>();
-                Integer partnerId = currentUser.getUserType() == 0 ? bind.getGuardianId() : bind.getElderId();
-                User partner = userService.getUserById(partnerId);
-                bindingMap.put("id", bind.getBindId());
-                bindingMap.put("partnerId", partnerId);
-                bindingMap.put("bind_status", bind.getBindStatus());
-                if (partner != null) {
-                    bindingMap.put("name", partner.getNickname());
-                    bindingMap.put("phone", partner.getPhoneNumber());
-                }
+            List<Map<String, Object>> bindInfo = rawBinds.stream()
+                    .filter(bind -> Integer.valueOf(0).equals(bind.getBindStatus())
+                            || Integer.valueOf(1).equals(bind.getBindStatus()))
+                    .map(bind -> {
+                        Map<String, Object> bindingMap = new HashMap<>();
+                        Integer partnerId = currentUser.getUserType() == 0 ? bind.getGuardianId() : bind.getElderId();
+                        User partner = userService.getUserById(partnerId);
+                        bindingMap.put("id", bind.getBindId());
+                        bindingMap.put("partnerId", partnerId);
+                        bindingMap.put("bind_status", bind.getBindStatus());
+                        if (partner != null) {
+                            bindingMap.put("name", partner.getNickname());
+                            bindingMap.put("phone", partner.getPhoneNumber());
+                        }
 
-                Integer initiatorId = bind.getInitiatorId();
-                boolean isActionable = bind.getBindStatus() == 0
-                        && initiatorId != null
-                        && !initiatorId.equals(currentUser.getId());
-                bindingMap.put("is_actionable", isActionable);
-                return bindingMap;
-            }).collect(Collectors.toList());
-
-            List<Service> rawServices = serviceService.getServicesForUser(currentUser.getId());
-            List<Map<String, Object>> serviceInfo = rawServices.stream().map(service -> {
-                Map<String, Object> serviceMap = new HashMap<>();
-                serviceMap.put("serviceId", service.getServiceId());
-                serviceMap.put("serviceType", service.getServiceType());
-                serviceMap.put("serviceDes", service.getServiceDes());
-                serviceMap.put("appointedAddress", service.getAppointedAddress());
-                serviceMap.put("scheduledTime", service.getScheduledTime());
-                serviceMap.put("serviceStatus", service.getServiceStatus());
-
-                User target = userService.getUserById(service.getTargetId());
-                User creator = userService.getUserById(service.getCreatorId());
-                serviceMap.put("targetName", target != null ? target.getNickname() : null);
-                serviceMap.put("creatorName", creator != null ? creator.getNickname() : null);
-                return serviceMap;
-            }).collect(Collectors.toList());
+                        Integer initiatorId = bind.getInitiatorId();
+                        boolean isActionable = bind.getBindStatus() == 0
+                                && initiatorId != null
+                                && !initiatorId.equals(currentUser.getId());
+                        bindingMap.put("is_actionable", isActionable);
+                        return bindingMap;
+                    }).collect(Collectors.toList());
 
             List<Emergency> emergencyInfo = currentUser.getUserType() != null && currentUser.getUserType() == 0
                     ? emergencyService.getEmergencyByUserId(currentUser.getId())
@@ -159,7 +140,6 @@ public class LoginController {
             Map<String, Object> responseMap = new HashMap<>();
             responseMap.put("token", token);
             responseMap.put("userInfo", currentUser);
-            responseMap.put("serviceInfo", serviceInfo);
             responseMap.put("emergencyInfo", emergencyInfo);
             responseMap.put("bindInfo", bindInfo);
 

@@ -1,9 +1,5 @@
 const app = getApp();
-
-// 补零函数，替代padStart
-function padZero(num) {
-  return num < 10 ? '0' + num : '' + num;
-}
+const { formatBeijingTime } = require('../../utils/serviceTime.js');
 
 Page({
   data: {
@@ -45,9 +41,6 @@ Page({
 
   onRefresh() {
     console.log('刷新服务列表');
-    // 清除缓存，确保获取最新数据
-    wx.removeStorageSync('serviceInfo');
-    // 重新加载服务
     this.loadServices();
   },
 
@@ -100,7 +93,6 @@ Page({
     const { services, currentStatus } = this.data;
     let filtered = [];
     
-    console.log('筛选服务，当前状态:', currentStatus, '服务列表:', services);
     
     if (currentStatus === 1) {
       // 待进行服务，包括状态为0（未指派）和1（待进行）的服务
@@ -115,7 +107,6 @@ Page({
       );
     }
     
-    console.log('筛选后的服务:', filtered);
     
     this.setData({
       filteredServices: filtered
@@ -151,40 +142,9 @@ Page({
   // 查看服务详情
   navigateToDetail(e) {
     const serviceId = e.currentTarget.dataset.id;
-    console.log('正在跳转到服务详情页，ID:', serviceId);
-    
-    // 确保缓存中有这个服务的数据
-    const cachedServices = wx.getStorageSync('serviceInfo') || [];
-    const service = cachedServices.find(s => 
-      s.id === serviceId || 
-      s.serviceId === serviceId || 
-      s.id === parseInt(serviceId) || 
-      s.serviceId === parseInt(serviceId)
-    );
-    
-    if (service) {
-      wx.navigateTo({
-        url: `/pages/service_detail/service_detail?id=${serviceId}`
-      });
-    } else {
-      // 如果缓存中没有找到，刷新列表后再跳转
-      wx.showToast({
-        title: '正在刷新服务数据...',
-        icon: 'loading',
-        duration: 1000
-      });
-      
-      // 清除缓存并重新加载
-      wx.removeStorageSync('serviceInfo');
-      this.loadServices();
-      
-      // 延迟导航，给loadServices一些时间来更新缓存
-      setTimeout(() => {
-        wx.navigateTo({
-          url: `/pages/service_detail/service_detail?id=${serviceId}`
-        });
-      }, 1500);
-    }
+    // 详情页自行向服务端验证权限，不要求订单先写进持久缓存。
+    if (!serviceId) return;
+    wx.navigateTo({ url: `/pages/service_detail/service_detail?id=${serviceId}` });
   },
 
   // 加载更多
@@ -248,33 +208,16 @@ Page({
         'Authorization': token
       },
       success: function(res) {
-        if (requestVersion !== that._serviceRequestVersion) return;
+        if (requestVersion !== that._serviceRequestVersion || token !== wx.getStorageSync('token')) return;
         if (requestedPage === 1) wx.hideLoading();
         
         if (res.statusCode === 200 && res.data && res.data.data) {
-          console.log('获取服务列表成功:', res.data);
           
           var services = res.data.data.map(function(item) {
-            // 转换时间格式
+            // 后端是 UTC Instant，这里统一以北京时间显示。
             if (item.scheduledTime) {
-              // 将UTC时间转换为北京时间（UTC+8）并格式化显示
-              var date = new Date(item.scheduledTime);
-              var beijingTime = new Date(date.getTime() + 8 * 60 * 60 * 1000);
-              
-              // 格式化为 MM-DD HH:MM
-              var month = beijingTime.getMonth() + 1;
-              var day = beijingTime.getDate();
-              var hours = beijingTime.getHours();
-              var minutes = beijingTime.getMinutes();
-              
-              // 补零
-              month = month < 10 ? '0' + month : month;
-              day = day < 10 ? '0' + day : day;
-              hours = hours < 10 ? '0' + hours : hours;
-              minutes = minutes < 10 ? '0' + minutes : minutes;
-              
-              item.formattedTime = month + '-' + day + ' ' + hours + ':' + minutes;
-              item.scheduledTime = item.formattedTime; // 确保scheduledTime字段也被设置
+              item.formattedTime = formatBeijingTime(item.scheduledTime) + '（北京时间）';
+              item.scheduledTime = item.formattedTime;
             }
             
             // 设置状态文本
@@ -319,9 +262,6 @@ Page({
           });
           
           var loadedServices = requestedPage === 1 ? services : that.data.services.concat(services);
-          // 缓存与页面始终表示已从服务器取得的订单，而不是假设后续页存在。
-          wx.setStorageSync('serviceInfo', loadedServices);
-          
           that.setData({
             services: loadedServices,
             page: requestedPage,
@@ -334,7 +274,6 @@ Page({
           // 过滤服务
           that.filterServices();
           
-          console.log('过滤后的服务列表:', that.data.filteredServices);
         } else {
           that.setData({
             isLoading: false,
@@ -349,7 +288,7 @@ Page({
         }
       },
       fail: function(err) {
-        if (requestVersion !== that._serviceRequestVersion) return;
+        if (requestVersion !== that._serviceRequestVersion || token !== wx.getStorageSync('token')) return;
         if (requestedPage === 1) wx.hideLoading();
         
         that.setData({

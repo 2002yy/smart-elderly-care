@@ -1,29 +1,5 @@
 var app = getApp();
-
-// 补零函数，替代padStart
-function padZero(num) {
-  return num < 10 ? '0' + num : '' + num;
-}
-
-// 格式化日期
-function formatDate(dateStr) {
-  if (!dateStr) return '';
-  try {
-    var date = new Date(dateStr);
-    // 将UTC时间转换为北京时间（UTC+8）
-    var beijingDate = new Date(date.getTime() + 8 * 60 * 60 * 1000);
-    var year = beijingDate.getFullYear();
-    var month = padZero(beijingDate.getMonth() + 1);
-    var day = padZero(beijingDate.getDate());
-    var hour = padZero(beijingDate.getHours());
-    var minute = padZero(beijingDate.getMinutes());
-    
-    return year + '-' + month + '-' + day + ' ' + hour + ':' + minute;
-  } catch (e) {
-    console.error('日期格式化错误:', e);
-    return dateStr;
-  }
-}
+const { formatBeijingTime } = require('../../utils/serviceTime.js');
 
 Page({
   data: {
@@ -91,11 +67,32 @@ Page({
       }, 1500);
     }
   },
+
+  onShow: function() {
+    // 从编辑页返回或切换账户后必须重新校验访问权限与履约状态。
+    if (this._hasShown && this.data.serviceId) {
+      var userInfo = wx.getStorageSync('userInfo') || {};
+      this.setData({
+        userType: userInfo.userType,
+        serviceData: {},
+        applications: [],
+        applicationsLoaded: false
+      });
+      this.updateButtonDisplay();
+      this.fetchServiceFromServer(this.data.serviceId);
+    }
+    this._hasShown = true;
+  },
   
   // 从服务器获取服务数据
   fetchServiceFromServer: function(serviceId) {
     var that = this;
     var token = wx.getStorageSync('token');
+    var requestVersion = (this._detailRequestVersion || 0) + 1;
+    this._detailRequestVersion = requestVersion;
+    // 新请求开始即撤掉旧订单，防止权限变化后仍展示上一账号的姓名与住址。
+    this.setData({ serviceData: {}, applications: [], applicationsLoaded: false });
+    this.updateButtonDisplay();
     
     if (!token) {
       wx.showToast({
@@ -118,16 +115,16 @@ Page({
         'Authorization': token
       },
       success: function(res) {
+        if (requestVersion !== that._detailRequestVersion || token !== wx.getStorageSync('token')) return;
         wx.hideLoading();
         
-        console.log('服务详情API响应:', res.data);
         
         if (res.statusCode === 200) {
           var service = res.data.service || res.data;
           if (service) {
             // 格式化时间
-            var formattedCreateTime = service.createTime ? formatDate(service.createTime) : '';
-            var formattedScheduledTime = service.scheduledTime ? formatDate(service.scheduledTime) : '';
+            var formattedCreateTime = service.createTime ? formatBeijingTime(service.createTime, true) + '（北京时间）' : '';
+            var formattedScheduledTime = service.scheduledTime ? formatBeijingTime(service.scheduledTime, true) + '（北京时间）' : '';
             
             // 获取服务类型文本
             var typeText = '';
@@ -161,9 +158,6 @@ Page({
               }
             });
             
-            // 更新本地缓存
-            that.updateServiceCache(service);
-            
             // 根据用户类型和服务状态决定显示哪些按钮
             that.updateButtonDisplay();
           } else {
@@ -175,14 +169,19 @@ Page({
           }
         } else {
           console.error('服务详情API返回了错误状态码:', res.statusCode);
+          that.setData({ serviceData: {}, applications: [], applicationsLoaded: false });
+          that.updateButtonDisplay();
           wx.showToast({
-            title: res.data.message || '获取服务详情失败',
+            title: (res.data && res.data.message) || '无权访问或服务已取消',
             icon: 'none'
           });
         }
       },
       fail: function(err) {
+        if (requestVersion !== that._detailRequestVersion || token !== wx.getStorageSync('token')) return;
         wx.hideLoading();
+        that.setData({ serviceData: {}, applications: [], applicationsLoaded: false });
+        that.updateButtonDisplay();
         console.error('获取服务详情失败:', err);
         wx.showToast({
           title: '网络请求失败',
@@ -190,46 +189,6 @@ Page({
         });
       }
     });
-  },
-  
-  // 更新本地服务缓存
-  updateServiceCache: function(service) {
-    var cachedServices = wx.getStorageSync('serviceInfo') || [];
-    var found = false;
-    
-    // 将后端字段名映射到前端字段名
-    var mappedService = {
-      id: service.serviceId || service.id,
-      status: service.serviceStatus !== undefined ? service.serviceStatus : service.status,
-      type: service.serviceType !== undefined ? service.serviceType : service.type,
-      scheduledTime: service.scheduledTime || '',
-      address: service.appointedAddress || service.address,
-      remark: service.serviceDes || service.remark,
-      targetId: service.targetId,
-      targetName: service.targetName,
-      providerId: service.providerId,
-      providerName: service.providerName,
-      staffName: service.providerName, // 用于前端显示
-      clientName: service.targetName // 用于前端显示
-    };
-    
-    // 检查是否存在该服务
-    for (var i = 0; i < cachedServices.length; i++) {
-      if (cachedServices[i].id === mappedService.id) {
-        // 更新现有服务
-        cachedServices[i] = mappedService;
-        found = true;
-        break;
-      }
-    }
-    
-    // 不存在则添加新服务
-    if (!found) {
-      cachedServices.push(mappedService);
-    }
-    
-    // 更新缓存
-    wx.setStorageSync('serviceInfo', cachedServices);
   },
   
   // 根据用户类型和服务状态更新按钮显示
@@ -253,12 +212,14 @@ Page({
     if (userType === 0 || userType === 1) {
       showApplicantsBtn = status === 0;
       showConfirmCompletionBtn = status === 2 && !!this.data.serviceData.completionRequestedAt;
-      if (status === 0 || status === 1) {
-        showModifyBtn = true; // 未指派或待进行状态可以修改
+      if (status === 0) {
+        showModifyBtn = true; // 未指派时可修改；获批接单后需取消重新预约
       } else if (status === 3) {
         showPayBtn = true; // 待支付状态显示支付按钮
       } else if (status === 4) {
-        showEvaluateBtn = true; // 待评价状态显示评价按钮
+        // 评分权属于被服务的老人本人，不属于代为创建预约的监护人。
+        const currentUser = wx.getStorageSync('userInfo') || {};
+        showEvaluateBtn = String(currentUser.id) === String(this.data.serviceData.targetId);
       }
     } 
     // 服务人员
@@ -374,76 +335,13 @@ Page({
       }
     });
   },
-  
+
   // 修改服务
   onModifyService: function() {
     var serviceId = this.data.serviceId;
-    console.log('跳转到修改服务页面，ID:', serviceId);
-    
-    // 直接从服务器获取最新的服务数据
-    var token = wx.getStorageSync('token');
-    var that = this;
-    
-    wx.showLoading({
-      title: '加载中...'
-    });
-    
-    wx.request({
-      url: app.globalData.baseUrl + '/api/services/' + serviceId,
-      method: 'GET',
-      header: {
-        'Authorization': token
-      },
-      success: function(res) {
-        wx.hideLoading();
-        
-        if (res.statusCode === 200) {
-          console.log('从服务器获取的服务详情:', res.data);
-          
-          // 将服务数据添加到缓存
-          var cachedServices = wx.getStorageSync('serviceInfo') || [];
-          var service = res.data;
-          var found = false;
-          
-          // 检查是否已存在于缓存中
-          for (var i = 0; i < cachedServices.length; i++) {
-            if ((cachedServices[i].id === serviceId) || 
-                (cachedServices[i].serviceId === serviceId) || 
-                (cachedServices[i].serviceId === parseInt(serviceId))) {
-              // 更新现有服务
-              cachedServices[i] = service;
-              found = true;
-              break;
-            }
-          }
-          
-          // 不存在则添加
-          if (!found) {
-            cachedServices.push(service);
-          }
-          
-          // 更新缓存
-          wx.setStorageSync('serviceInfo', cachedServices);
-          
-          // 跳转到修改页面
-          wx.navigateTo({
-            url: '/pages/service_create/service_create?id=' + serviceId
-          });
-        } else {
-          wx.showToast({
-            title: res.data.message || '获取服务详情失败',
-            icon: 'none'
-          });
-        }
-      },
-      fail: function(err) {
-        wx.hideLoading();
-        console.error('获取服务详情失败:', err);
-        wx.showToast({
-          title: '网络请求失败',
-          icon: 'none'
-        });
-      }
+    // 由编辑页单次读取原始服务端数据，避免二次请求和缓存回填旧状态。
+    wx.navigateTo({
+      url: '/pages/service_create/service_create?id=' + serviceId
     });
   },
   
@@ -459,74 +357,12 @@ Page({
   // 评价服务
   onEvaluateService: function() {
     var serviceId = this.data.serviceId;
-    console.log('跳转到评价服务页面，ID:', serviceId);
-    
-    try {
-      // 确保服务ID不为空
-      if (!serviceId) {
-        wx.showToast({
-          title: '服务ID不存在',
-          icon: 'none'
-        });
-        return;
-      }
-      
-      // 再次确认服务数据存在
-      if (!this.data.serviceData) {
-        wx.showToast({
-          title: '服务数据不存在',
-          icon: 'none'
-        });
-        return;
-      }
-      
-      // 将服务信息保存到缓存，确保评价页面能获取到
-      var cachedServices = wx.getStorageSync('serviceInfo') || [];
-      var found = false;
-      for (var i = 0; i < cachedServices.length; i++) {
-        if (cachedServices[i].id === serviceId || 
-            cachedServices[i].serviceId === serviceId || 
-            cachedServices[i].id === parseInt(serviceId) || 
-            cachedServices[i].serviceId === parseInt(serviceId)) {
-          found = true;
-          break;
-        }
-      }
-      
-      if (!found) {
-        // 如果缓存中没有找到该服务，则添加
-        var serviceData = this.data.serviceData;
-        serviceData.id = serviceId;
-        serviceData.serviceId = serviceId;
-        cachedServices.push(serviceData);
-      }
-      
-      // 更新缓存
-      wx.setStorageSync('serviceInfo', cachedServices);
-      
-      console.log('准备跳转到评价页面，服务ID:', serviceId);
-      
-      // 跳转到评价页面，使用serviceId作为参数
-      wx.navigateTo({
-        url: '/pages/service_evaluate/service_evaluate?id=' + serviceId,
-        success: function() {
-          console.log('成功跳转到评价页面');
-        },
-        fail: function(err) {
-          console.error('跳转到评价页面失败:', err);
-          wx.showToast({
-            title: '跳转失败，请重试',
-            icon: 'none'
-          });
-        }
-      });
-    } catch (error) {
-      console.error('评价服务过程中出错:', error);
-      wx.showToast({
-        title: '操作失败，请重试',
-        icon: 'none'
-      });
+    if (!serviceId || this.data.serviceData.status !== 4) {
+      wx.showToast({ title: '当前订单不可评价', icon: 'none' });
+      return;
     }
+    // 评价页同样自己取最新详情，不复制订单进本地持久缓存。
+    wx.navigateTo({ url: '/pages/service_evaluate/service_evaluate?id=' + serviceId });
   },
   
   // 未接入文件接收与存储服务，不能模拟上传成功。
@@ -568,13 +404,6 @@ Page({
       },
       success: (res) => {
         if (res.statusCode === 200) {
-          // 从缓存中删除该服务
-          var cachedServices = wx.getStorageSync('serviceInfo') || [];
-          var updatedServices = cachedServices.filter(s => 
-            s.id !== serviceId && s.serviceId !== serviceId
-          );
-          wx.setStorageSync('serviceInfo', updatedServices);
-          
           wx.showToast({ title: '服务已取消', icon: 'success' });
           
           // 延迟返回

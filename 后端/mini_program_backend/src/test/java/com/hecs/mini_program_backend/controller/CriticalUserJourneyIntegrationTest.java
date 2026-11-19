@@ -111,6 +111,14 @@ class CriticalUserJourneyIntegrationTest {
                 .andExpect(jsonPath("$.total").value(1))
                 .andExpect(jsonPath("$.data[0].serviceId").value(service.getServiceId()))
                 .andExpect(jsonPath("$.data[0].address").value("CI养老服务中心"));
+
+        mockMvc.perform(post("/api/services/update/" + service.getServiceId())
+                        .header("Authorization", authorization)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"remark\":\"预约前修改成功\"}"))
+                .andExpect(status().isOk());
+        assertThat(serviceRepository.findById(service.getServiceId()).orElseThrow().getServiceDes())
+                .isEqualTo("预约前修改成功");
     }
 
     @Test
@@ -135,6 +143,79 @@ class CriticalUserJourneyIntegrationTest {
                 .andExpect(status().isForbidden());
 
         assertThat(serviceRepository.findAll()).isEmpty();
+    }
+
+    @Test
+    void revokingGuardianBindingRemovesOrderAccessButKeepsEldersOrder() throws Exception {
+        User guardian = saveUser("ci-revoked-guardian", 1, "已解绑监护人");
+        User elder = saveUser("ci-revoked-elder", 0, "解除绑定的老人");
+        Bind binding = new Bind();
+        binding.setGuardianId(guardian.getId());
+        binding.setElderId(elder.getId());
+        binding.setInitiatorId(guardian.getId());
+        binding.setBindStatus(1);
+        binding = bindRepository.saveAndFlush(binding);
+
+        Service service = new Service();
+        service.setCreatorId(guardian.getId());
+        service.setTargetId(elder.getId());
+        service.setProviderId(0);
+        service.setServiceStatus(0);
+        service.setServiceType(1);
+        service.setAppointedAddress("解除绑定后不得再查看的住址");
+        int id = serviceRepository.saveAndFlush(service).getServiceId();
+        String guardianToken = "Bearer " + new TokenGenerate().TokenGenerate(
+                guardian.getOpenId(), guardian.getUserType());
+        String elderToken = "Bearer " + new TokenGenerate().TokenGenerate(
+                elder.getOpenId(), elder.getUserType());
+
+        mockMvc.perform(get("/api/services").header("Authorization", guardianToken))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.total").value(1));
+        mockMvc.perform(get("/api/services/" + id).header("Authorization", guardianToken))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.address").value("解除绑定后不得再查看的住址"));
+
+        // 注册接口允许修改用户类型；活跃绑定也不能让非监护人继续按 creatorId 读取老人住址。
+        guardian.setUserType(99);
+        userRepository.saveAndFlush(guardian);
+        mockMvc.perform(get("/api/services").header("Authorization", guardianToken))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.total").value(0));
+        guardian.setUserType(1);
+        userRepository.saveAndFlush(guardian);
+
+        mockMvc.perform(put("/api/bindings/%d/status".formatted(binding.getBindId()))
+                        .header("Authorization", elderToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"bind_status\":2}"))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/services").header("Authorization", guardianToken))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.total").value(0));
+        mockMvc.perform(get("/api/services").header("Authorization", guardianToken).param("status", "1"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.total").value(0));
+        mockMvc.perform(get("/api/services/" + id).header("Authorization", guardianToken))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(post("/api/services/update/" + id).header("Authorization", guardianToken)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"address\":\"试图绕过解绑\"}"))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(post("/api/services/cancel/" + id).header("Authorization", guardianToken))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/services/" + id + "/applications").header("Authorization", guardianToken))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(post("/api/services/" + id + "/applications/1/approve")
+                        .header("Authorization", guardianToken))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(post("/api/services/" + id + "/confirm-completion")
+                        .header("Authorization", guardianToken))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/bindings").header("Authorization", guardianToken))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.length()").value(0));
+
+        // 解绑不删服务历史；老人本人依然可以管理，避免订单凭空消失。
+        mockMvc.perform(get("/api/services").header("Authorization", elderToken))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.total").value(1));
+        mockMvc.perform(get("/api/services/" + id).header("Authorization", elderToken))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.address").value("解除绑定后不得再查看的住址"));
+        assertThat(serviceRepository.findById(id)).isPresent();
     }
 
     @Test
@@ -262,6 +343,15 @@ class CriticalUserJourneyIntegrationTest {
         mockMvc.perform(post("/api/services/" + id + "/applications/" + chosenApplicationId + "/approve")
                         .header("Authorization", elderToken))
                 .andExpect(status().isConflict());
+
+        // 订单已经获批接单，即使还没开始，也不能暗中改住址/时间破坏员工同意的范围。
+        mockMvc.perform(post("/api/services/update/" + id)
+                        .header("Authorization", elderToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"address\":\"未经员工同意更换住址\"}"))
+                .andExpect(status().isConflict());
+        assertThat(serviceRepository.findById(id).orElseThrow().getAppointedAddress())
+                .isEqualTo("绝不能提前泄露的住址");
 
         // 未批准的员工不能操作履约；批准后仍不能跳过开始和完工申请。
         mockMvc.perform(post("/api/services/" + id + "/start").header("Authorization", otherToken))
