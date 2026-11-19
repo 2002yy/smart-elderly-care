@@ -213,6 +213,23 @@ class ServiceControllerSecurityTest {
     }
 
     @Test
+    void creatorCannotDeleteInProgressOrHistoricalService() throws Exception {
+        User requester = user(1, "creator");
+        Service service = service(10, 1, 2, 0, 2);
+        when(userService.getUserByOpenId("creator")).thenReturn(requester);
+        when(serviceService.getServiceById(10)).thenReturn(service);
+
+        for (int statusValue : new int[]{2, 3, 4, 5}) {
+            service.setServiceStatus(statusValue);
+            mockMvc.perform(post("/api/services/cancel/10")
+                            .header("Authorization", bearer("creator", 0)))
+                    .andExpect(status().isConflict());
+        }
+
+        verify(serviceService, never()).deleteService(10);
+    }
+
+    @Test
     void unrelatedUserCannotEvaluateService() throws Exception {
         User requester = user(99, "requester");
         Service service = service(10, 1, 2, 3, 4);
