@@ -14,7 +14,6 @@ import org.springframework.web.bind.annotation.*;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/emergency")
@@ -134,8 +133,7 @@ public class EmergencyController {
 
     @PostMapping("/help")
     public ResponseEntity<?> sendEmergencyHelp(
-            @RequestHeader("Authorization") String token,
-            @RequestBody Map<String, Object> body) {
+            @RequestHeader("Authorization") String token) {
         try {
             // 解析token
             tokenParse.parseToken(token.replace("Bearer ", ""));
@@ -147,26 +145,13 @@ public class EmergencyController {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("用户不存在");
             }
             
-            // 获取位置信息
-            Map<String, Object> location = (Map<String, Object>) body.get("location");
-            if (location == null) {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("位置信息不能为空");
-            }
-            
-            // 获取紧急消息
-            String message = body.containsKey("message") ? body.get("message").toString() : "";
-            
-            // TODO: 实际应用中，这里应该发送紧急求助信息到相关服务或者通知监护人
-            // 这里只是模拟返回一个求助ID
-            String helpId = UUID.randomUUID().toString();
-            
-            // 返回结果
+            // 当前没有通知接收方、发送渠道或送达确认；绝不能生成假求助单号并返回成功。
+            // 保留端点兼容旧客户端，但明确告知请求没有产生任何实际救援通知。
             Map<String, Object> response = new HashMap<>();
-            response.put("success", true);
-            response.put("message", "发送紧急求助成功");
-            response.put("helpId", helpId);
-            
-            return ResponseEntity.ok(response);
+            response.put("success", false);
+            response.put("delivered", false);
+            response.put("message", "当前版本未接入紧急求助通知，未向任何接收方发送消息；请直接拨打当地急救电话或联系监护人");
+            return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).body(response);
         } catch (JwtException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("无效的token");
         } catch (Exception e) {

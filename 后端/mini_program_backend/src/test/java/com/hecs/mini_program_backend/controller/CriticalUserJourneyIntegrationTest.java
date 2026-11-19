@@ -90,6 +90,24 @@ class CriticalUserJourneyIntegrationTest {
                 .andExpect(jsonPath("$.message").value("code不能为空"));
     }
 
+    @Test
+    void emergencyHelpDoesNotClaimDeliveryWithoutARealNotificationChannel() throws Exception {
+        User user = saveUser("ci-emergency", 0, "测试老人");
+        String authorization = "Bearer " + new TokenGenerate().TokenGenerate(
+                user.getOpenId(), user.getUserType());
+
+        mockMvc.perform(post("/api/emergency/help")
+                        .header("Authorization", authorization)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"location":{"latitude":39.9,"longitude":116.4},"message":"紧急求助"}
+                                """))
+                .andExpect(status().isNotImplemented())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.delivered").value(false))
+                .andExpect(jsonPath("$.helpId").doesNotExist());
+    }
+
     private User saveUser(String openId, int userType, String nickname) {
         User user = new User();
         user.setOpenId(openId);

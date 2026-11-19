@@ -389,7 +389,7 @@
 | message       | string  | 提示信息         |
 | emergencyInfo | object  | 更新后的紧急信息 |
 
-### 发送紧急求助
+### 紧急求助通知（尚未实现）
 
 **接口地址**: `/api/emergency/help`
 
@@ -401,28 +401,11 @@
 | ------------- | ------ | ---- | -------- |
 | Authorization | string | 是   | 登录令牌 |
 
-**请求参数**:
+**当前行为**：服务端尚未接入监护人或救援机构的实际通知渠道。认证成功后返回
+HTTP `501 Not Implemented`，`success: false`、`delivered: false` 和提示消息，
+**不会生成求助单号，也不会发送求助**。旧客户端仍可调用此路径，但不能把返回值视为送达证据。
 
-| 参数名   | 类型   | 必填 | 描述     |
-| -------- | ------ | ---- | -------- |
-| location | object | 是   | 位置信息 |
-| message  | string | 否   | 紧急消息 |
-
-**location对象结构**:
-
-| 参数名    | 类型   | 描述     |
-| --------- | ------ | -------- |
-| latitude  | number | 纬度     |
-| longitude | number | 经度     |
-| address   | string | 地址描述 |
-
-**响应参数**:
-
-| 参数名  | 类型    | 描述     |
-| ------- | ------- | -------- |
-| success | boolean | 是否成功 |
-| message | string  | 提示信息 |
-| helpId  | string  | 求助ID   |
+小程序急救卡目前仅提供中国大陆 120 和监护人的直接拨号入口，呼叫是否接通需由用户确认。
 
 ## 绑定关系
 

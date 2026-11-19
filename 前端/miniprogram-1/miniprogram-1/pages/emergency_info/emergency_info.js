@@ -9,9 +9,7 @@ Page({
     bindInfo: [],
     emergencyContact: {},
     emergencyInfo: {},
-    loading: false,
-    sendingHelp: false,
-    location: null
+    loading: false
   },
 
   /**
@@ -166,115 +164,29 @@ Page({
   },
 
   /**
-   * 发送紧急求助
+   * 尚无实际通知渠道；只提供直接拨号，不谎称已经发送求助。
+   * 拨号无需登录、网络或定位授权，也不受医疗信息加载状态影响。
    */
-  sendEmergencyHelp() {
-    if (this.data.sendingHelp) {
-      return; // 防止重复点击
-    }
-
-    this.setData({ sendingHelp: true });
-    
-    // 获取token
-    const token = wx.getStorageSync('token');
-    if (!token) {
-      wx.showToast({
-        title: '请先登录',
-        icon: 'none'
-      });
-      this.setData({ sendingHelp: false });
-      return;
-    }
-
-    // 获取位置信息
-    wx.showLoading({
-      title: '获取位置信息...'
-    });
-
-    wx.getLocation({
-      type: 'gcj02', // 使用国测局坐标系
-      success: (res) => {
-        const location = {
-          latitude: res.latitude,
-          longitude: res.longitude
-        };
-        
-        this.setData({ location });
-        this.submitEmergencyHelp(location);
-      },
-      fail: (err) => {
-        console.error('获取位置信息失败:', err);
-        wx.showModal({
-          title: '位置获取失败',
-          content: '无法获取您的位置信息，是否继续发送紧急求助？',
-          success: (res) => {
-            if (res.confirm) {
-              // 用户确认，继续发送求助但不包含位置信息
-              this.submitEmergencyHelp(null);
-            } else {
-              // 用户取消
-              this.setData({ sendingHelp: false });
-              wx.hideLoading();
-            }
-          }
-        });
+  callEmergencyServices() {
+    wx.makePhoneCall({
+      phoneNumber: '120',
+      fail: () => {
+        wx.showToast({ title: '无法发起拨号，请使用手机电话拨打', icon: 'none' });
       }
     });
   },
 
-  /**
-   * 提交紧急求助到后端
-   */
-  submitEmergencyHelp(location) {
-    // 获取全局配置中的baseUrl
-    const app = getApp();
-    const baseUrl = app.globalData.baseUrl || 'http://localhost:8081';
-    
-    // 获取token
-    const token = wx.getStorageSync('token');
-    
-    wx.showLoading({
-      title: '发送求助信息...'
-    });
-    
-    const data = {
-      location: location,
-      message: '紧急求助'
-    };
-    
-    wx.request({
-      url: `${baseUrl}/api/emergency/help`,
-      method: 'POST',
-      header: {
-        'content-type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      data: data,
-      success: (res) => {
-        if (res.statusCode === 200) {
-          wx.showModal({
-            title: '紧急求助已发送',
-            content: '您的紧急求助信息已成功发送，请保持手机畅通',
-            showCancel: false
-          });
-        } else {
-          wx.showToast({
-            title: res.data && res.data.message ? res.data.message : '发送求助失败',
-            icon: 'none'
-          });
-          console.error('发送紧急求助失败:', res);
-        }
-      },
-      fail: (err) => {
-        wx.showToast({
-          title: '网络错误，请重试',
-          icon: 'none'
-        });
-        console.error('请求失败:', err);
-      },
-      complete: () => {
-        this.setData({ sendingHelp: false });
-        wx.hideLoading();
+  callEmergencyContact() {
+    const contact = this.data.emergencyContact;
+    const phoneNumber = contact && contact.phone;
+    if (!phoneNumber) {
+      wx.showToast({ title: '尚未设置监护人电话', icon: 'none' });
+      return;
+    }
+    wx.makePhoneCall({
+      phoneNumber: String(phoneNumber),
+      fail: () => {
+        wx.showToast({ title: '无法发起拨号，请使用手机电话拨打', icon: 'none' });
       }
     });
   }

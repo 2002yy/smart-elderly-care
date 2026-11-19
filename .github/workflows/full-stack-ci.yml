@@ -52,7 +52,8 @@ jobs:
             frontend=true
             compose=true
           else
-            git diff --name-only "${BASE_SHA}" "${HEAD_SHA}" > "${RUNNER_TEMP}/changed-files"
+            # Git 默认会把中文路径转义成带引号的八进制序列，导致下方 case 永远匹配不到。
+            git -c core.quotePath=false diff --name-only "${BASE_SHA}" "${HEAD_SHA}" > "${RUNNER_TEMP}/changed-files"
             while IFS= read -r path; do
               case "$path" in
                 前端/miniprogram-1/miniprogram-1/*)

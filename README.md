@@ -11,7 +11,7 @@
 - 微信静默登录与 JWT 鉴权；
 - 老人—监护人绑定；
 - 服务创建、接单、进行、支付、评价；
-- 紧急医疗信息和求助；
+- 紧急医疗信息展示和直接拨号（尚未接入自动求助通知）；
 - 原生微信小程序页面与 Spring Boot REST API。
 
 当前重点不是继续堆功能，而是建立可重复的构建、测试、启动和发布证据。
@@ -149,6 +149,11 @@ MINIPROGRAM_API_BASE_URL=https://api.example.com npm run build
 | 评价 | POST | `/api/services/evaluate/{id}` |
 | 绑定 | GET/POST/PUT | `/api/bindings/**` |
 | 紧急信息 | GET/POST | `/api/emergency/**` |
+
+**急救功能限制**：`POST /api/emergency/help` 没有真实的消息接收方或投递渠道，
+现在明确返回 HTTP 501 和 `delivered: false`，不能作为已通知监护人或急救机构的证据。
+小程序急救卡提供中国大陆 120 和已绑定监护人的直接拨号入口；拨号不等于接通。
+未填写的病史、过敏史和药物信息显示为“未填写”，不能默认解释为“无”。
 
 详细字段见前后端目录中的 `API_Documentation.md`。
 
