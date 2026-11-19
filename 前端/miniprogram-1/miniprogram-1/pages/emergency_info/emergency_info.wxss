@@ -127,7 +127,18 @@
   opacity: 0.9;
 }
 
-/* 紧急求助按钮 */
+/* 直接拨号入口 */
+.safety-notice {
+  width: 85vw;
+  box-sizing: border-box;
+  padding: 20rpx 24rpx;
+  background: #fff6e5;
+  border-left: 6rpx solid #c36a00;
+  color: #663c12;
+  font-size: 28rpx;
+  line-height: 1.5;
+}
+
 .emergency-btn {
   width: 85vw;
   height: 88rpx;
@@ -150,10 +161,15 @@
   opacity: 0.9;
 }
 
-.emergency-btn.disabled {
-  background: #ccc;
-  box-shadow: none;
-  opacity: 0.7;
+.contact-btn {
+  width: 85vw;
+  min-height: 88rpx;
+  margin: 0;
+  background: #fff;
+  color: #164e63;
+  border: 2rpx solid #164e63;
+  border-radius: 44rpx;
+  font-size: 30rpx;
 }
 
 .emergency-icon {

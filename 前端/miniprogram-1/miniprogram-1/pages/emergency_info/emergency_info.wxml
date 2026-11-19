@@ -2,7 +2,19 @@
 <view class="container">
   <view class="page-header">
     <view class="title">急救卡</view>
-    <view class="subtitle">以下信息将在紧急情况下提供给急救人员</view>
+    <view class="subtitle">供本人或现场人员查看；信息不会自动发送给急救人员</view>
+  </view>
+
+  <!-- 直接拨号：即使后端不可用、信息仍在加载，也能操作。 -->
+  <view class="action-area">
+    <view class="safety-notice">当前版本尚未接入自动求助通知。点击下面的按钮将发起电话拨号，不代表已经联系上救援人员；中国大陆以外请拨打当地急救电话。</view>
+    <button class="emergency-btn" bindtap="callEmergencyServices">
+      <text class="emergency-icon">☎</text>
+      <text>拨打 120（中国大陆急救）</text>
+    </button>
+    <button wx:if="{{emergencyContact.phone}}" class="contact-btn" bindtap="callEmergencyContact">
+      拨打监护人电话
+    </button>
   </view>
 
   <!-- 加载中提示 -->
@@ -60,27 +72,27 @@
       
       <view class="info-item">
         <view class="info-label">过敏史</view>
-        <view class="info-value">{{emergencyInfo.allergies || '无'}}</view>
+        <view class="info-value">{{emergencyInfo.allergies || '未填写'}}</view>
       </view>
       
       <view class="info-item">
         <view class="info-label">基础疾病</view>
-        <view class="info-value">{{emergencyInfo.basicDiseases || '无'}}</view>
+        <view class="info-value">{{emergencyInfo.basicDiseases || '未填写'}}</view>
       </view>
       
       <view class="info-item">
         <view class="info-label">手术/植入物史</view>
-        <view class="info-value">{{emergencyInfo.surgeryHistory || '无'}}</view>
+        <view class="info-value">{{emergencyInfo.surgeryHistory || '未填写'}}</view>
       </view>
       
       <view class="info-item">
         <view class="info-label">用药情况</view>
-        <view class="info-value">{{emergencyInfo.medication || '无'}}</view>
+        <view class="info-value">{{emergencyInfo.medication || '未填写'}}</view>
       </view>
       
       <view class="info-item">
         <view class="info-label">急救备注</view>
-        <view class="info-value">{{emergencyInfo.emergencyNotes || '无'}}</view>
+        <view class="info-value">{{emergencyInfo.emergencyNotes || '未填写'}}</view>
       </view>
     </view>
   </view>
@@ -91,11 +103,5 @@
     <navigator url="/pages/emergency/emergency" class="edit-btn">
       编辑急救信息
     </navigator>
-    
-    <!-- 紧急求助按钮 -->
-    <button class="emergency-btn {{sendingHelp ? 'disabled' : ''}}" bindtap="sendEmergencyHelp" disabled="{{sendingHelp}}">
-      <text class="emergency-icon">⚠️</text>
-      <text>发送紧急求助</text>
-    </button>
   </view>
 </view>
